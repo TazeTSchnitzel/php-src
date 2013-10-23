@@ -5806,7 +5806,7 @@ void zend_do_add_static_array_element(znode *result, znode *offset, const znode 
 }
 /* }}} */
 
-void zend_do_add_list_element(const znode *element TSRMLS_DC) /* {{{ */
+void zend_do_add_list_element(const znode *element, zend_bool by_ref TSRMLS_DC) /* {{{ */
 {
 	list_llist_element lle;
 
@@ -5814,6 +5814,7 @@ void zend_do_add_list_element(const znode *element TSRMLS_DC) /* {{{ */
 		zend_check_writable_variable(element);
 
 		lle.var = *element;
+		lle.by_ref = by_ref;
 		zend_llist_copy(&lle.dimensions, &CG(dimension_llist));
 		zend_llist_prepend_element(&CG(list_llist), &lle);
 	}
@@ -5854,7 +5855,8 @@ void zend_do_list_end(znode *result, znode *expr TSRMLS_DC) /* {{{ */
 
 	le = CG(list_llist).head;
 	while (le) {
-		zend_llist *tmp_dimension_llist = &((list_llist_element *)le->data)->dimensions;
+		list_llist_element *ld = (list_llist_element *) le->data;
+		zend_llist *tmp_dimension_llist = &ld->dimensions;
 		dimension = tmp_dimension_llist->head;
 		while (dimension) {
 			opline = get_next_op(CG(active_op_array) TSRMLS_CC);
@@ -5885,9 +5887,13 @@ void zend_do_list_end(znode *result, znode *expr TSRMLS_DC) /* {{{ */
 			GET_NODE(&last_container, opline->result);
 			dimension = dimension->next;
 		}
-		((list_llist_element *) le->data)->value = last_container;
-		zend_llist_destroy(&((list_llist_element *) le->data)->dimensions);
-		zend_do_assign(result, &((list_llist_element *) le->data)->var, &((list_llist_element *) le->data)->value TSRMLS_CC);
+		ld->value = last_container;
+		zend_llist_destroy(&ld->dimensions);
+		if (ld->by_ref) {
+			zend_do_assign_ref(result, &ld->var, &ld->value TSRMLS_CC);
+		} else {
+			zend_do_assign(result, &ld->var, &ld->value TSRMLS_CC);
+		}
 		zend_do_free(result TSRMLS_CC);
 		le = le->next;
 	}
