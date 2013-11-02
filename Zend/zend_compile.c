@@ -5864,8 +5864,14 @@ void zend_do_list_end(znode *result, znode *expr TSRMLS_DC) /* {{{ */
 				last_container = *expr;
 				switch (expr->op_type) {
 					case IS_VAR:
-					case IS_CV:
 						opline->opcode = ZEND_FETCH_DIM_R;
+						break;
+					case IS_CV:
+						if (ld->by_ref) {
+							opline->opcode = ZEND_FETCH_DIM_W;
+						} else {
+							opline->opcode = ZEND_FETCH_DIM_R;
+						}
 						break;
 					case IS_TMP_VAR:
 						opline->opcode = ZEND_FETCH_DIM_TMP_VAR;
@@ -5877,7 +5883,11 @@ void zend_do_list_end(znode *result, znode *expr TSRMLS_DC) /* {{{ */
 				}
 				opline->extended_value |= ZEND_FETCH_ADD_LOCK;
 			} else {
-				opline->opcode = ZEND_FETCH_DIM_R;
+				if (ld->by_ref) {
+					opline->opcode = ZEND_FETCH_DIM_W;
+				} else {
+					opline->opcode = ZEND_FETCH_DIM_R;
+				}
 			}
 			opline->result_type = IS_VAR;
 			opline->result.var = get_temporary_variable(CG(active_op_array));
