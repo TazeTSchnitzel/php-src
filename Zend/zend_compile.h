@@ -370,6 +370,7 @@ typedef struct _list_llist_element {
 	znode var;
 	zend_llist dimensions;
 	znode value;
+	zend_bool by_ref;
 } list_llist_element;
 
 union _temp_variable;
@@ -586,7 +587,7 @@ void zend_do_add_array_element(znode *result, const znode *expr, const znode *of
 void zend_do_add_static_array_element(znode *result, znode *offset, const znode *expr);
 void zend_do_list_init(TSRMLS_D);
 void zend_do_list_end(znode *result, znode *expr TSRMLS_DC);
-void zend_do_add_list_element(const znode *element TSRMLS_DC);
+void zend_do_add_list_element(const znode *element, zend_bool by_ref TSRMLS_DC);
 void zend_do_new_list_begin(TSRMLS_D);
 void zend_do_new_list_end(TSRMLS_D);
 

@@ -1136,9 +1136,10 @@ assignment_list:
 
 
 assignment_list_element:
-		variable								{ zend_do_add_list_element(&$1 TSRMLS_CC); }
+		variable								{ zend_do_add_list_element(&$1, 0 TSRMLS_CC); }
+	|	'&' variable							{ zend_do_add_list_element(&$2, 1 TSRMLS_CC); }
 	|	T_LIST '(' { zend_do_new_list_begin(TSRMLS_C); } assignment_list ')'	{ zend_do_new_list_end(TSRMLS_C); }
-	|	/* empty */							{ zend_do_add_list_element(NULL TSRMLS_CC); }
+	|	/* empty */								{ zend_do_add_list_element(NULL, 0 TSRMLS_CC); }
 ;
 
 
