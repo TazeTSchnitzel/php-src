@@ -1923,6 +1923,12 @@ ZEND_API int increment_function(zval *op1) /* {{{ */
 				long lval;
 				double dval;
 
+				if (Z_STRLEN_P(op1) == 0) { /* consider as 0 */
+					str_efree(Z_STRVAL_P(op1));
+					ZVAL_LONG(op1, -1);
+					break;
+				}
+
 				switch (is_numeric_string(Z_STRVAL_P(op1), Z_STRLEN_P(op1), &lval, &dval, 0)) {
 					case IS_LONG:
 						str_efree(Z_STRVAL_P(op1));
@@ -1937,10 +1943,6 @@ ZEND_API int increment_function(zval *op1) /* {{{ */
 					case IS_DOUBLE:
 						str_efree(Z_STRVAL_P(op1));
 						ZVAL_DOUBLE(op1, dval+1);
-						break;
-					default:
-						/* Perl style string increment */
-						increment_string(op1);
 						break;
 				}
 			}
@@ -1983,7 +1985,7 @@ ZEND_API int decrement_function(zval *op1) /* {{{ */
 		case IS_DOUBLE:
 			Z_DVAL_P(op1) = Z_DVAL_P(op1) - 1;
 			break;
-		case IS_STRING:		/* Like perl we only support string increment */
+		case IS_STRING:
 			if (Z_STRLEN_P(op1) == 0) { /* consider as 0 */
 				str_efree(Z_STRVAL_P(op1));
 				ZVAL_LONG(op1, -1);
