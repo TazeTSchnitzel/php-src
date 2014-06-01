@@ -1002,6 +1002,10 @@ static_scalar_value:
 	|	static_operation { $$ = $1; }
 ;
 
+static_scalar_bare_name:
+	T_STRING	{ $$.u.ast = zend_ast_create_constant(&$1.u.constant); }
+;
+
 static_operation:
 		static_scalar_value '[' static_scalar_value ']' { $$.u.ast = zend_ast_create_binary(ZEND_FETCH_DIM_R, $1.u.ast, $3.u.ast); }
 	|	static_scalar_value '+' static_scalar_value { $$.u.ast = zend_ast_create_binary(ZEND_ADD, $1.u.ast, $3.u.ast); }
@@ -1065,8 +1069,10 @@ possible_comma:
 
 non_empty_static_array_pair_list:
 		non_empty_static_array_pair_list ',' static_scalar_value T_DOUBLE_ARROW static_scalar_value { zend_ast_dynamic_add(&$$.u.ast, $3.u.ast); zend_ast_dynamic_add(&$$.u.ast, $5.u.ast); }
+	|	non_empty_static_array_pair_list ',' static_scalar_bare_name ':' static_scalar_value { zend_ast_dynamic_add(&$$.u.ast, $3.u.ast); zend_ast_dynamic_add(&$$.u.ast, $5.u.ast); }
 	|	non_empty_static_array_pair_list ',' static_scalar_value { zend_ast_dynamic_add(&$$.u.ast, NULL); zend_ast_dynamic_add(&$$.u.ast, $3.u.ast); }
 	|	static_scalar_value T_DOUBLE_ARROW static_scalar_value { $$.u.ast = zend_ast_create_dynamic(ZEND_INIT_ARRAY); zend_ast_dynamic_add(&$$.u.ast, $1.u.ast); zend_ast_dynamic_add(&$$.u.ast, $3.u.ast); }
+	|	static_scalar_bare_name ':' static_scalar_value { $$.u.ast = zend_ast_create_dynamic(ZEND_INIT_ARRAY); zend_ast_dynamic_add(&$$.u.ast, $1.u.ast); zend_ast_dynamic_add(&$$.u.ast, $3.u.ast); }
 	|	static_scalar_value { $$.u.ast = zend_ast_create_dynamic(ZEND_INIT_ARRAY); zend_ast_dynamic_add(&$$.u.ast, NULL); zend_ast_dynamic_add(&$$.u.ast, $1.u.ast); }
 ;
 
@@ -1222,12 +1228,16 @@ array_pair_list:
 
 non_empty_array_pair_list:
 		non_empty_array_pair_list ',' expr T_DOUBLE_ARROW expr	{ zend_do_add_array_element(&$$, &$5, &$3, 0 TSRMLS_CC); }
+	|	non_empty_array_pair_list ',' T_STRING ':' expr			{ zend_do_add_array_element(&$$, &$5, &$3, 0 TSRMLS_CC); }
 	|	non_empty_array_pair_list ',' expr			{ zend_do_add_array_element(&$$, &$3, NULL, 0 TSRMLS_CC); }
 	|	expr T_DOUBLE_ARROW expr	{ zend_do_init_array(&$$, &$3, &$1, 0 TSRMLS_CC); }
+    |	T_STRING ':' expr			{ zend_do_init_array(&$$, &$3, &$1, 0 TSRMLS_CC); }
 	|	expr 				{ zend_do_init_array(&$$, &$1, NULL, 0 TSRMLS_CC); }
-	|	non_empty_array_pair_list ',' expr T_DOUBLE_ARROW '&' w_variable { zend_do_add_array_element(&$$, &$6, &$3, 1 TSRMLS_CC); }
+	|	non_empty_array_pair_list ',' expr T_DOUBLE_ARROW '&' w_variable	{ zend_do_add_array_element(&$$, &$6, &$3, 1 TSRMLS_CC); }
+	|	non_empty_array_pair_list ',' T_STRING ':' '&' w_variable			{ zend_do_add_array_element(&$$, &$6, &$3, 1 TSRMLS_CC); }
 	|	non_empty_array_pair_list ',' '&' w_variable { zend_do_add_array_element(&$$, &$4, NULL, 1 TSRMLS_CC); }
 	|	expr T_DOUBLE_ARROW '&' w_variable	{ zend_do_init_array(&$$, &$4, &$1, 1 TSRMLS_CC); }
+	|	T_STRING ':' '&' w_variable			{ zend_do_init_array(&$$, &$4, &$1, 1 TSRMLS_CC); }
 	|	'&' w_variable 			{ zend_do_init_array(&$$, &$2, NULL, 1 TSRMLS_CC); }
 ;
 
