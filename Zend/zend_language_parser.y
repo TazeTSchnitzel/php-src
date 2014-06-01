@@ -187,6 +187,7 @@ static YYSIZE_T zend_yytnamerr(char*, const char*);
 %token T_INTERFACE  "interface (T_INTERFACE)"
 %token T_EXTENDS    "extends (T_EXTENDS)"
 %token T_IMPLEMENTS "implements (T_IMPLEMENTS)"
+%right T_COLON_ARROW     ":> (T_COLON_ARROW)"
 %token T_OBJECT_OPERATOR "-> (T_OBJECT_OPERATOR)"
 %token T_DOUBLE_ARROW    "=> (T_DOUBLE_ARROW)"
 %token T_LIST            "list (T_LIST)"
@@ -753,8 +754,10 @@ chaining_method_or_property:
 ;
 
 chaining_dereference:
-		chaining_dereference '[' dim_offset ']'	{ fetch_array_dim(&$$, &$1, &$3 TSRMLS_CC); }
+		chaining_dereference '[' dim_offset ']'			{ fetch_array_dim(&$$, &$1, &$3 TSRMLS_CC); }
+	|	chaining_dereference T_COLON_ARROW T_STRING		{ fetch_array_dim(&$$, &$1, &$3 TSRMLS_CC); }
 	|	'[' dim_offset ']'		{ zend_do_pop_object(&$1 TSRMLS_CC); fetch_array_dim(&$$, &$1, &$2 TSRMLS_CC); }
+	|	T_COLON_ARROW T_STRING	{ zend_do_pop_object(&$1 TSRMLS_CC); fetch_array_dim(&$$, &$1, &$2 TSRMLS_CC); }
 ;
 
 chaining_instance_call:
@@ -865,9 +868,11 @@ yield_expr:
 ;
 
 combined_scalar_offset:
-	  combined_scalar '[' dim_offset ']' { zend_do_begin_variable_parse(TSRMLS_C); fetch_array_dim(&$$, &$1, &$3 TSRMLS_CC); }
-	| combined_scalar_offset '[' dim_offset ']' { fetch_array_dim(&$$, &$1, &$3 TSRMLS_CC); }
-    | T_CONSTANT_ENCAPSED_STRING '[' dim_offset ']' { $1.EA = 0; zend_do_begin_variable_parse(TSRMLS_C); fetch_array_dim(&$$, &$1, &$3 TSRMLS_CC); }
+		combined_scalar '[' dim_offset ']'		{ zend_do_begin_variable_parse(TSRMLS_C); fetch_array_dim(&$$, &$1, &$3 TSRMLS_CC); }
+	|	combined_scalar T_COLON_ARROW T_STRING	{ zend_do_begin_variable_parse(TSRMLS_C); fetch_array_dim(&$$, &$1, &$3 TSRMLS_CC); }
+	|	combined_scalar_offset '[' dim_offset ']'		{ fetch_array_dim(&$$, &$1, &$3 TSRMLS_CC); }
+	|	combined_scalar_offset T_COLON_ARROW T_STRING	{ fetch_array_dim(&$$, &$1, &$3 TSRMLS_CC); }
+    |	T_CONSTANT_ENCAPSED_STRING '[' dim_offset ']'		{ $1.EA = 0; zend_do_begin_variable_parse(TSRMLS_C); fetch_array_dim(&$$, &$1, &$3 TSRMLS_CC); }
 
 combined_scalar:
       T_ARRAY '(' array_pair_list ')' { $$ = $3; }
@@ -1007,7 +1012,8 @@ static_scalar_bare_name:
 ;
 
 static_operation:
-		static_scalar_value '[' static_scalar_value ']' { $$.u.ast = zend_ast_create_binary(ZEND_FETCH_DIM_R, $1.u.ast, $3.u.ast); }
+		static_scalar_value '[' static_scalar_value ']'				{ $$.u.ast = zend_ast_create_binary(ZEND_FETCH_DIM_R, $1.u.ast, $3.u.ast); }
+	|	static_scalar_value T_COLON_ARROW static_scalar_bare_name	{ $$.u.ast = zend_ast_create_binary(ZEND_FETCH_DIM_R, $1.u.ast, $3.u.ast); }
 	|	static_scalar_value '+' static_scalar_value { $$.u.ast = zend_ast_create_binary(ZEND_ADD, $1.u.ast, $3.u.ast); }
 	|	static_scalar_value '-' static_scalar_value { $$.u.ast = zend_ast_create_binary(ZEND_SUB, $1.u.ast, $3.u.ast); }
 	|	static_scalar_value '*' static_scalar_value { $$.u.ast = zend_ast_create_binary(ZEND_MUL, $1.u.ast, $3.u.ast); }
@@ -1120,8 +1126,10 @@ variable_property:
 ;
 
 array_method_dereference:
-		array_method_dereference '[' dim_offset ']' { fetch_array_dim(&$$, &$1, &$3 TSRMLS_CC); }
-	|	method '[' dim_offset ']' { $1.EA = ZEND_PARSED_METHOD_CALL; fetch_array_dim(&$$, &$1, &$3 TSRMLS_CC); }
+		array_method_dereference '[' dim_offset ']'			{ fetch_array_dim(&$$, &$1, &$3 TSRMLS_CC); }
+	|	array_method_dereference T_COLON_ARROW T_STRING	{ fetch_array_dim(&$$, &$1, &$3 TSRMLS_CC); }
+	|	method '[' dim_offset ']'		{ $1.EA = ZEND_PARSED_METHOD_CALL; fetch_array_dim(&$$, &$1, &$3 TSRMLS_CC); }
+	|	method T_COLON_ARROW T_STRING	{ $1.EA = ZEND_PARSED_METHOD_CALL; fetch_array_dim(&$$, &$1, &$3 TSRMLS_CC); }
 ;
 
 method:
@@ -1151,9 +1159,12 @@ variable_class_name:
 ;
 
 array_function_dereference:
-		array_function_dereference '[' dim_offset ']' { fetch_array_dim(&$$, &$1, &$3 TSRMLS_CC); }
+		array_function_dereference '[' dim_offset ']'		{ fetch_array_dim(&$$, &$1, &$3 TSRMLS_CC); }
+		array_function_dereference T_COLON_ARROW T_STRING	{ fetch_array_dim(&$$, &$1, &$3 TSRMLS_CC); }
 	|	function_call { zend_do_begin_variable_parse(TSRMLS_C); $1.EA = ZEND_PARSED_FUNCTION_CALL; }
-		'[' dim_offset ']' { fetch_array_dim(&$$, &$1, &$4 TSRMLS_CC); }
+		'[' dim_offset ']'		{ fetch_array_dim(&$$, &$1, &$4 TSRMLS_CC); }
+	|	function_call { zend_do_begin_variable_parse(TSRMLS_C); $1.EA = ZEND_PARSED_FUNCTION_CALL; }
+		T_COLON_ARROW T_STRING	{ fetch_array_dim(&$$, &$1, &$4 TSRMLS_CC); }
 ;
 
 base_variable_with_function_calls:
@@ -1170,7 +1181,8 @@ base_variable:
 ;
 
 reference_variable:
-		reference_variable '[' dim_offset ']'	{ fetch_array_dim(&$$, &$1, &$3 TSRMLS_CC); }
+		reference_variable '[' dim_offset ']'		{ fetch_array_dim(&$$, &$1, &$3 TSRMLS_CC); }
+	|	reference_variable T_COLON_ARROW T_STRING	{ fetch_array_dim(&$$, &$1, &$3 TSRMLS_CC); }
 	|	reference_variable '{' expr '}'		{ fetch_string_offset(&$$, &$1, &$3 TSRMLS_CC); }
 	|	compound_variable			{ zend_do_begin_variable_parse(TSRMLS_C); fetch_simple_variable(&$$, &$1, 1 TSRMLS_CC); }
 ;
@@ -1193,7 +1205,8 @@ object_property:
 ;
 
 object_dim_list:
-		object_dim_list '[' dim_offset ']'	{ fetch_array_dim(&$$, &$1, &$3 TSRMLS_CC); }
+		object_dim_list '[' dim_offset ']'		{ fetch_array_dim(&$$, &$1, &$3 TSRMLS_CC); }
+	|	object_dim_list T_COLON_ARROW T_STRING	{ fetch_array_dim(&$$, &$1, &$3 TSRMLS_CC); }
 	|	object_dim_list '{' expr '}'		{ fetch_string_offset(&$$, &$1, &$3 TSRMLS_CC); }
 	|	variable_name { znode tmp_znode;  zend_do_pop_object(&tmp_znode TSRMLS_CC);  zend_do_fetch_property(&$$, &tmp_znode, &$1 TSRMLS_CC);}
 ;

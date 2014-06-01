@@ -1327,6 +1327,10 @@ NEWLINE ("\r"|"\n"|"\r\n")
 	return T_DOUBLE_ARROW;
 }
 
+<ST_IN_SCRIPTING>":>" {
+	return T_COLON_ARROW;
+}
+
 <ST_IN_SCRIPTING>"list" {
 	return T_LIST;
 }
