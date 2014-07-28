@@ -435,6 +435,11 @@ void zend_register_closure_ce(TSRMLS_D) /* {{{ */
 
 ZEND_API void zend_create_closure(zval *res, zend_function *func, zend_class_entry *scope, zval *this_ptr TSRMLS_DC) /* {{{ */
 {
+	zend_create_closure_ex(res, func, scope, this_ptr, 1 TSRMLS_CC);
+}
+
+ZEND_API void zend_create_closure_ex(zval *res, zend_function *func, zend_class_entry *scope, zval *this_ptr, zend_bool assume_static TSRMLS_DC) /* {{{ */
+{
 	zend_closure *closure;
 
 	object_init_ex(res, zend_ce_closure);
@@ -490,7 +495,7 @@ ZEND_API void zend_create_closure(zval *res, zend_function *func, zend_class_ent
 		if (this_ptr && (closure->func.common.fn_flags & ZEND_ACC_STATIC) == 0) {
 			closure->this_ptr = this_ptr;
 			Z_ADDREF_P(this_ptr);
-		} else {
+		} else if (assume_static) {
 			closure->func.common.fn_flags |= ZEND_ACC_STATIC;
 		}
 	}

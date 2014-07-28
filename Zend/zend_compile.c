@@ -1967,6 +1967,30 @@ void zend_do_receive_param(zend_uchar op, znode *varname, const znode *initializ
 }
 /* }}} */
 
+void zend_do_function_reference(znode *result, znode *class_name, znode *function_name, zend_bool check_namespace TSRMLS_DC) /* {{{ */
+{
+	zend_op *opline;
+	
+	opline = get_next_op(CG(active_op_array) TSRMLS_CC);
+	opline->opcode = ZEND_FUNCTION_REFERENCE;
+	opline->result_type = IS_TMP_VAR;
+	opline->result.var = get_temporary_variable(CG(active_op_array));
+	GET_NODE(result, opline->result);
+	
+	if (class_name) {
+		zend_resolve_class_name(class_name TSRMLS_CC);
+		opline->op1_type = IS_CONST;
+		opline->op1.constant = zend_add_class_name_literal(CG(active_op_array), &class_name->u.constant TSRMLS_CC);
+	} else {
+		SET_UNUSED(opline->op1);
+	}
+	
+	zend_resolve_function_name(function_name, &check_namespace TSRMLS_CC);
+	opline->op2_type = IS_CONST;
+	opline->op2.constant = zend_add_ns_func_name_literal(CG(active_op_array), &function_name->u.constant TSRMLS_CC);
+}
+/* }}} */
+
 int zend_do_begin_function_call(znode *function_name, zend_bool check_namespace TSRMLS_DC) /* {{{ */
 {
 	zend_function *function;

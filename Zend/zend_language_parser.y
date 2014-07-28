@@ -855,6 +855,7 @@ expr_without_variable:
 	|	T_STATIC function is_reference { zend_do_begin_lambda_function_declaration(&$$, &$2, $3.op_type, 1 TSRMLS_CC); }
 		'(' parameter_list ')' lexical_vars
 		'{' inner_statement_list '}' { zend_do_end_function_declaration(&$2 TSRMLS_CC); $$ = $4; }
+	|	function_reference { $$ = $1; }
 ;
 
 yield_expr:
@@ -906,6 +907,13 @@ function_call:
 		function_call_parameter_list { zend_do_end_function_call(NULL, &$$, 1, 1 TSRMLS_CC); zend_do_extended_fcall_end(TSRMLS_C);}
 	|	variable_without_objects { zend_do_end_variable_parse(&$1, BP_VAR_R, 0 TSRMLS_CC); zend_do_begin_dynamic_function_call(&$1, 0 TSRMLS_CC); }
 		function_call_parameter_list { zend_do_end_function_call(&$1, &$$, 0, 1 TSRMLS_CC); zend_do_extended_fcall_end(TSRMLS_C);}
+;
+
+function_reference:
+		'&' namespace_name { zend_do_function_reference(&$$, NULL, &$2, 1 TSRMLS_CC); }
+	|	'&' T_NAMESPACE T_NS_SEPARATOR namespace_name { $2.op_type = IS_CONST; ZVAL_EMPTY_STRING(&$2.u.constant); zend_do_build_namespace_name(&$2, &$2, &$4 TSRMLS_CC); zend_do_function_reference(&$$, NULL, &$2, 0 TSRMLS_CC); }
+	|	'&' T_NS_SEPARATOR namespace_name { zend_do_function_reference(&$$, NULL, &$3, 0 TSRMLS_CC); }
+	|	'&' class_name T_PAAMAYIM_NEKUDOTAYIM variable_name { zend_do_function_reference(&$$, &$2, &$4, 0 TSRMLS_CC); }
 ;
 
 class_name:

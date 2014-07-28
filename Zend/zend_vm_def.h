@@ -2805,6 +2805,44 @@ ZEND_VM_HANDLER(69, ZEND_INIT_NS_FCALL_BY_NAME, ANY, CONST)
 	ZEND_VM_NEXT_OPCODE();
 }
 
+ZEND_VM_HANDLER(168, ZEND_FUNCTION_REFERENCE, CONST|UNUSED, CONST)
+{
+	USE_OPLINE
+	zend_function *function;
+	zend_literal *func_name = opline->op2.literal + 1;
+
+	if (OP1_TYPE != IS_UNUSED) {
+		zend_class_entry *ce;
+		zend_literal *class_name = opline->op1.literal + 1;
+
+		ce = zend_fetch_class_by_name(Z_STRVAL(class_name->constant), Z_STRLEN(class_name->constant), NULL, 0 TSRMLS_CC);
+		if (UNEXPECTED(ce == NULL)) {
+			CHECK_EXCEPTION();
+			ZEND_VM_NEXT_OPCODE();
+		}
+
+		if (ce->get_static_method) {
+			function = ce->get_static_method(ce, Z_STRVAL(func_name->constant), Z_STRLEN(func_name->constant) TSRMLS_CC);
+		} else {
+			function = zend_std_get_static_method(ce, Z_STRVAL(func_name->constant), Z_STRLEN(func_name->constant), NULL TSRMLS_CC);
+		}
+		
+		if (UNEXPECTED(!function)) {
+			zend_error_noreturn(E_RECOVERABLE_ERROR, "Reference to undefined method %s::%s", Z_STRVAL(class_name->constant), Z_STRVAL(func_name->constant));
+		}
+		
+		zend_create_closure_ex(&EX_T(opline->result.var).tmp_var, function, ce, NULL, 0 TSRMLS_CC);
+	} else {	
+		if (UNEXPECTED(zend_hash_quick_find(EG(function_table), Z_STRVAL(func_name->constant), Z_STRLEN(func_name->constant) + 1, Z_HASH_P(&func_name->constant), (void **) &function) == FAILURE)) {
+			zend_error_noreturn(E_RECOVERABLE_ERROR, "Reference to undefined function %s", Z_STRVAL(func_name->constant));
+		}
+		
+		zend_create_closure(&EX_T(opline->result.var).tmp_var, function, NULL, NULL TSRMLS_CC);
+	}
+	
+	ZEND_VM_NEXT_OPCODE();
+}
+
 ZEND_VM_HANDLER(61, ZEND_DO_FCALL_BY_NAME, ANY, ANY)
 {
 	EX(function_state).function = EX(call)->fbc;

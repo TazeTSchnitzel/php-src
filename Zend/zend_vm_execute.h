@@ -3934,6 +3934,44 @@ static int ZEND_FASTCALL  ZEND_INIT_STATIC_METHOD_CALL_SPEC_CONST_CONST_HANDLER(
 	ZEND_VM_NEXT_OPCODE();
 }
 
+static int ZEND_FASTCALL  ZEND_FUNCTION_REFERENCE_SPEC_CONST_CONST_HANDLER(ZEND_OPCODE_HANDLER_ARGS)
+{
+	USE_OPLINE
+	zend_function *function;
+	zend_literal *func_name = opline->op2.literal + 1;
+
+	if (IS_CONST != IS_UNUSED) {
+		zend_class_entry *ce;
+		zend_literal *class_name = opline->op1.literal + 1;
+
+		ce = zend_fetch_class_by_name(Z_STRVAL(class_name->constant), Z_STRLEN(class_name->constant), NULL, 0 TSRMLS_CC);
+		if (UNEXPECTED(ce == NULL)) {
+			CHECK_EXCEPTION();
+			ZEND_VM_NEXT_OPCODE();
+		}
+
+		if (ce->get_static_method) {
+			function = ce->get_static_method(ce, Z_STRVAL(func_name->constant), Z_STRLEN(func_name->constant) TSRMLS_CC);
+		} else {
+			function = zend_std_get_static_method(ce, Z_STRVAL(func_name->constant), Z_STRLEN(func_name->constant), NULL TSRMLS_CC);
+		}
+
+		if (UNEXPECTED(!function)) {
+			zend_error_noreturn(E_RECOVERABLE_ERROR, "Reference to undefined method %s::%s", Z_STRVAL(class_name->constant), Z_STRVAL(func_name->constant));
+		}
+
+		zend_create_closure_ex(&EX_T(opline->result.var).tmp_var, function, ce, NULL, 0 TSRMLS_CC);
+	} else {
+		if (UNEXPECTED(zend_hash_quick_find(EG(function_table), Z_STRVAL(func_name->constant), Z_STRLEN(func_name->constant) + 1, Z_HASH_P(&func_name->constant), (void **) &function) == FAILURE)) {
+			zend_error_noreturn(E_RECOVERABLE_ERROR, "Reference to undefined function %s", Z_STRVAL(func_name->constant));
+		}
+
+		zend_create_closure(&EX_T(opline->result.var).tmp_var, function, NULL, NULL TSRMLS_CC);
+	}
+
+	ZEND_VM_NEXT_OPCODE();
+}
+
 static int ZEND_FASTCALL  ZEND_CASE_SPEC_CONST_CONST_HANDLER(ZEND_OPCODE_HANDLER_ARGS)
 {
 	USE_OPLINE
@@ -25525,6 +25563,44 @@ static int ZEND_FASTCALL  ZEND_INIT_METHOD_CALL_SPEC_UNUSED_CONST_HANDLER(ZEND_O
 	ZEND_VM_NEXT_OPCODE();
 }
 
+static int ZEND_FASTCALL  ZEND_FUNCTION_REFERENCE_SPEC_UNUSED_CONST_HANDLER(ZEND_OPCODE_HANDLER_ARGS)
+{
+	USE_OPLINE
+	zend_function *function;
+	zend_literal *func_name = opline->op2.literal + 1;
+
+	if (IS_UNUSED != IS_UNUSED) {
+		zend_class_entry *ce;
+		zend_literal *class_name = opline->op1.literal + 1;
+
+		ce = zend_fetch_class_by_name(Z_STRVAL(class_name->constant), Z_STRLEN(class_name->constant), NULL, 0 TSRMLS_CC);
+		if (UNEXPECTED(ce == NULL)) {
+			CHECK_EXCEPTION();
+			ZEND_VM_NEXT_OPCODE();
+		}
+
+		if (ce->get_static_method) {
+			function = ce->get_static_method(ce, Z_STRVAL(func_name->constant), Z_STRLEN(func_name->constant) TSRMLS_CC);
+		} else {
+			function = zend_std_get_static_method(ce, Z_STRVAL(func_name->constant), Z_STRLEN(func_name->constant), NULL TSRMLS_CC);
+		}
+
+		if (UNEXPECTED(!function)) {
+			zend_error_noreturn(E_RECOVERABLE_ERROR, "Reference to undefined method %s::%s", Z_STRVAL(class_name->constant), Z_STRVAL(func_name->constant));
+		}
+
+		zend_create_closure_ex(&EX_T(opline->result.var).tmp_var, function, ce, NULL, 0 TSRMLS_CC);
+	} else {
+		if (UNEXPECTED(zend_hash_quick_find(EG(function_table), Z_STRVAL(func_name->constant), Z_STRLEN(func_name->constant) + 1, Z_HASH_P(&func_name->constant), (void **) &function) == FAILURE)) {
+			zend_error_noreturn(E_RECOVERABLE_ERROR, "Reference to undefined function %s", Z_STRVAL(func_name->constant));
+		}
+
+		zend_create_closure(&EX_T(opline->result.var).tmp_var, function, NULL, NULL TSRMLS_CC);
+	}
+
+	ZEND_VM_NEXT_OPCODE();
+}
+
 static int ZEND_FASTCALL  ZEND_FETCH_CONSTANT_SPEC_UNUSED_CONST_HANDLER(ZEND_OPCODE_HANDLER_ARGS)
 {
 	USE_OPLINE
@@ -45453,6 +45529,31 @@ void zend_init_opcodes_handlers(void)
   	ZEND_ASSIGN_POW_SPEC_CV_VAR_HANDLER,
   	ZEND_ASSIGN_POW_SPEC_CV_UNUSED_HANDLER,
   	ZEND_ASSIGN_POW_SPEC_CV_CV_HANDLER,
+  	ZEND_FUNCTION_REFERENCE_SPEC_CONST_CONST_HANDLER,
+  	ZEND_NULL_HANDLER,
+  	ZEND_NULL_HANDLER,
+  	ZEND_NULL_HANDLER,
+  	ZEND_NULL_HANDLER,
+  	ZEND_NULL_HANDLER,
+  	ZEND_NULL_HANDLER,
+  	ZEND_NULL_HANDLER,
+  	ZEND_NULL_HANDLER,
+  	ZEND_NULL_HANDLER,
+  	ZEND_NULL_HANDLER,
+  	ZEND_NULL_HANDLER,
+  	ZEND_NULL_HANDLER,
+  	ZEND_NULL_HANDLER,
+  	ZEND_NULL_HANDLER,
+  	ZEND_FUNCTION_REFERENCE_SPEC_UNUSED_CONST_HANDLER,
+  	ZEND_NULL_HANDLER,
+  	ZEND_NULL_HANDLER,
+  	ZEND_NULL_HANDLER,
+  	ZEND_NULL_HANDLER,
+  	ZEND_NULL_HANDLER,
+  	ZEND_NULL_HANDLER,
+  	ZEND_NULL_HANDLER,
+  	ZEND_NULL_HANDLER,
+  	ZEND_NULL_HANDLER,
   	ZEND_NULL_HANDLER
   };
   zend_opcode_handlers = (opcode_handler_t*)labels;
