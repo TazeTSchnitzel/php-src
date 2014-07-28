@@ -3945,7 +3945,7 @@ static int ZEND_FASTCALL  ZEND_FUNCTION_REFERENCE_SPEC_CONST_CONST_HANDLER(ZEND_
 		zend_literal *class_name = opline->op1.literal + 1;
 
 		ce = zend_fetch_class_by_name(Z_STRVAL(class_name->constant), Z_STRLEN(class_name->constant), NULL, 0 TSRMLS_CC);
-		if (UNEXPECTED(ce == NULL)) {
+		if (UNEXPECTED(!ce)) {
 			CHECK_EXCEPTION();
 			ZEND_VM_NEXT_OPCODE();
 		}
@@ -25574,7 +25574,7 @@ static int ZEND_FASTCALL  ZEND_FUNCTION_REFERENCE_SPEC_UNUSED_CONST_HANDLER(ZEND
 		zend_literal *class_name = opline->op1.literal + 1;
 
 		ce = zend_fetch_class_by_name(Z_STRVAL(class_name->constant), Z_STRLEN(class_name->constant), NULL, 0 TSRMLS_CC);
-		if (UNEXPECTED(ce == NULL)) {
+		if (UNEXPECTED(!ce)) {
 			CHECK_EXCEPTION();
 			ZEND_VM_NEXT_OPCODE();
 		}
