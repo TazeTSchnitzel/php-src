@@ -435,10 +435,10 @@ void zend_register_closure_ce(TSRMLS_D) /* {{{ */
 
 ZEND_API void zend_create_closure(zval *res, zend_function *func, zend_class_entry *scope, zval *this_ptr TSRMLS_DC) /* {{{ */
 {
-	zend_create_closure_ex(res, func, scope, this_ptr, 1 TSRMLS_CC);
+	zend_create_closure_ex(res, func, scope, this_ptr, 0 TSRMLS_CC);
 }
 
-ZEND_API void zend_create_closure_ex(zval *res, zend_function *func, zend_class_entry *scope, zval *this_ptr, zend_bool assume_static TSRMLS_DC) /* {{{ */
+ZEND_API void zend_create_closure_ex(zval *res, zend_function *func, zend_class_entry *scope, zval *this_ptr, zend_bool unbound_scoped TSRMLS_DC) /* {{{ */
 {
 	zend_closure *closure;
 
@@ -487,15 +487,17 @@ ZEND_API void zend_create_closure_ex(zval *res, zend_function *func, zend_class_
 
 	closure->this_ptr = NULL;
 	/* Invariants:
-	 * If the closure is unscoped, it has no bound object.
-	 * The the closure is scoped, it's either static or it's bound */
+	 * If the closure is unscoped, it is unbound.
+	 * If the closure is scoped, it may be static, bound or unbound */
 	closure->func.common.scope = scope;
 	if (scope) {
 		closure->func.common.fn_flags |= ZEND_ACC_PUBLIC;
 		if (this_ptr && (closure->func.common.fn_flags & ZEND_ACC_STATIC) == 0) {
 			closure->this_ptr = this_ptr;
 			Z_ADDREF_P(this_ptr);
-		} else if (assume_static) {
+		/* We assume that a static scoped closure is desired if given NULL to bind to
+		   If an unbound scoped closure is desired, the parameter must be set to 1*/
+		} else if (!unbound_scoped) {
 			closure->func.common.fn_flags |= ZEND_ACC_STATIC;
 		}
 	}

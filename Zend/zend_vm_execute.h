@@ -3960,7 +3960,7 @@ static int ZEND_FASTCALL  ZEND_FUNCTION_REFERENCE_SPEC_CONST_CONST_HANDLER(ZEND_
 			zend_error_noreturn(E_RECOVERABLE_ERROR, "Reference to undefined method %s::%s", Z_STRVAL(class_name->constant), Z_STRVAL(func_name->constant));
 		}
 
-		zend_create_closure_ex(&EX_T(opline->result.var).tmp_var, function, ce, NULL, 0 TSRMLS_CC);
+		zend_create_closure_ex(&EX_T(opline->result.var).tmp_var, function, ce, NULL, 1 TSRMLS_CC);
 	} else {
 		if (UNEXPECTED(zend_hash_quick_find(EG(function_table), Z_STRVAL(func_name->constant), Z_STRLEN(func_name->constant) + 1, Z_HASH_P(&func_name->constant), (void **) &function) == FAILURE)) {
 			zend_error_noreturn(E_RECOVERABLE_ERROR, "Reference to undefined function %s", Z_STRVAL(func_name->constant));
@@ -25589,7 +25589,7 @@ static int ZEND_FASTCALL  ZEND_FUNCTION_REFERENCE_SPEC_UNUSED_CONST_HANDLER(ZEND
 			zend_error_noreturn(E_RECOVERABLE_ERROR, "Reference to undefined method %s::%s", Z_STRVAL(class_name->constant), Z_STRVAL(func_name->constant));
 		}
 
-		zend_create_closure_ex(&EX_T(opline->result.var).tmp_var, function, ce, NULL, 0 TSRMLS_CC);
+		zend_create_closure_ex(&EX_T(opline->result.var).tmp_var, function, ce, NULL, 1 TSRMLS_CC);
 	} else {
 		if (UNEXPECTED(zend_hash_quick_find(EG(function_table), Z_STRVAL(func_name->constant), Z_STRLEN(func_name->constant) + 1, Z_HASH_P(&func_name->constant), (void **) &function) == FAILURE)) {
 			zend_error_noreturn(E_RECOVERABLE_ERROR, "Reference to undefined function %s", Z_STRVAL(func_name->constant));
