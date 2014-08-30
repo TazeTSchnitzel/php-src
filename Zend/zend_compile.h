@@ -35,6 +35,14 @@
 
 #define SET_UNUSED(op)  op ## _type = IS_UNUSED
 
+#define MAKE_NOP(opline) do { \
+	opline->opcode = ZEND_NOP; \
+	memset(&opline->result, 0, sizeof(opline->result)); \
+	memset(&opline->op1, 0, sizeof(opline->op1)); \
+	memset(&opline->op2, 0, sizeof(opline->op2)); \
+	opline->result_type = opline->op1_type = opline->op2_type = IS_UNUSED; \
+} while (0)
+
 #define RESET_DOC_COMMENT() do { \
 	if (CG(doc_comment)) { \
 		zend_string_release(CG(doc_comment)); \
@@ -245,6 +253,16 @@ typedef struct _zend_arg_info {
 	zend_bool is_variadic;
 } zend_arg_info;
 
+/* TODO: (maybe) unify type information across the various places, such as
+ * return types, parameter types and exceptions */
+typedef struct _zend_type_decl {
+	zend_string *name;
+	zend_uchar kind;
+} zend_type_decl;
+
+void zend_type_decl_ctor(zend_type_decl*, zend_uchar, zend_string*);
+void zend_type_decl_dtor(zend_type_decl*);
+
 /* the following structure repeats the layout of zend_arg_info,
  * but its fields have different meaning. It's used as the first element of
  * arg_info array to define properties of internal functions.
@@ -270,6 +288,7 @@ struct _zend_op_array {
 	uint32_t num_args;
 	uint32_t required_num_args;
 	zend_arg_info *arg_info;
+	zend_type_decl return_type;
 	/* END of common elements */
 
 	uint32_t *refcount;
@@ -320,6 +339,7 @@ typedef struct _zend_internal_function {
 	uint32_t num_args;
 	uint32_t required_num_args;
 	zend_arg_info *arg_info;
+	zend_type_decl return_type;
 	/* END of common elements */
 
 	void (*handler)(INTERNAL_FUNCTION_PARAMETERS);
@@ -340,6 +360,7 @@ union _zend_function {
 		uint32_t num_args;
 		uint32_t required_num_args;
 		zend_arg_info *arg_info;
+		zend_type_decl return_type;
 	} common;
 
 	zend_op_array op_array;

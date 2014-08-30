@@ -2110,6 +2110,51 @@ static int ZEND_FASTCALL  ZEND_INIT_FCALL_BY_NAME_SPEC_VAR_HANDLER(ZEND_OPCODE_H
 	}
 }
 
+static int ZEND_FASTCALL  ZEND_VERIFY_RETURN_TYPE_SPEC_VAR_HANDLER(ZEND_OPCODE_HANDLER_ARGS)
+{
+	USE_OPLINE
+	zval *retval_ptr;
+	zend_free_op free_op1;
+	zend_type_decl *return_type = NULL;
+	zend_class_entry *ce = NULL;
+
+	SAVE_OPLINE();
+	retval_ptr = get_zval_ptr(opline->op1_type, &opline->op1, execute_data, &free_op1, BP_VAR_R);
+
+	if (opline->op1_type == IS_UNUSED || Z_ISNULL_P(retval_ptr)) {
+		zend_return_type_error(E_RECOVERABLE_ERROR, EX(func), retval_ptr, NULL TSRMLS_CC);
+	} else {
+		return_type = &EX(func)->common.return_type;
+
+		switch (return_type->kind) {
+			case IS_OBJECT:
+				if (UNEXPECTED(Z_TYPE_P(retval_ptr) != IS_OBJECT)) {
+					zend_return_type_error(E_RECOVERABLE_ERROR, EX(func), retval_ptr, NULL TSRMLS_CC);
+				}
+				ce = Z_CE_P(EX_VAR(opline->op2.var));
+				if (UNEXPECTED(ce == NULL)) {
+					zend_return_type_error(E_RECOVERABLE_ERROR, EX(func), retval_ptr, NULL TSRMLS_CC);
+				} else if (UNEXPECTED(!instanceof_function(Z_OBJCE_P(retval_ptr), ce TSRMLS_CC))) {
+					zend_return_type_error(E_RECOVERABLE_ERROR, EX(func), retval_ptr, NULL TSRMLS_CC);
+				}
+				break;
+
+			case IS_CALLABLE:
+				if (UNEXPECTED(!zend_is_callable_ex(retval_ptr, NULL, IS_CALLABLE_CHECK_SILENT, NULL, NULL, NULL TSRMLS_CC))) {
+					zend_return_type_error(E_RECOVERABLE_ERROR, EX(func), retval_ptr, NULL TSRMLS_CC);
+				}
+				break;
+
+			case IS_ARRAY:
+				if (UNEXPECTED(Z_TYPE_P(retval_ptr) != IS_ARRAY)) {
+					zend_return_type_error(E_RECOVERABLE_ERROR, EX(func), retval_ptr, NULL TSRMLS_CC);
+				}
+				break;
+		}
+	}
+	ZEND_VM_NEXT_OPCODE();
+}
+
 static int ZEND_FASTCALL  ZEND_FETCH_CLASS_SPEC_UNUSED_HANDLER(ZEND_OPCODE_HANDLER_ARGS)
 {
 	USE_OPLINE
@@ -2147,6 +2192,51 @@ static int ZEND_FASTCALL  ZEND_FETCH_CLASS_SPEC_UNUSED_HANDLER(ZEND_OPCODE_HANDL
 		CHECK_EXCEPTION();
 		ZEND_VM_NEXT_OPCODE();
 	}
+}
+
+static int ZEND_FASTCALL  ZEND_VERIFY_RETURN_TYPE_SPEC_UNUSED_HANDLER(ZEND_OPCODE_HANDLER_ARGS)
+{
+	USE_OPLINE
+	zval *retval_ptr;
+	zend_free_op free_op1;
+	zend_type_decl *return_type = NULL;
+	zend_class_entry *ce = NULL;
+
+	SAVE_OPLINE();
+	retval_ptr = get_zval_ptr(opline->op1_type, &opline->op1, execute_data, &free_op1, BP_VAR_R);
+
+	if (opline->op1_type == IS_UNUSED || Z_ISNULL_P(retval_ptr)) {
+		zend_return_type_error(E_RECOVERABLE_ERROR, EX(func), retval_ptr, NULL TSRMLS_CC);
+	} else {
+		return_type = &EX(func)->common.return_type;
+
+		switch (return_type->kind) {
+			case IS_OBJECT:
+				if (UNEXPECTED(Z_TYPE_P(retval_ptr) != IS_OBJECT)) {
+					zend_return_type_error(E_RECOVERABLE_ERROR, EX(func), retval_ptr, NULL TSRMLS_CC);
+				}
+				ce = Z_CE_P(EX_VAR(opline->op2.var));
+				if (UNEXPECTED(ce == NULL)) {
+					zend_return_type_error(E_RECOVERABLE_ERROR, EX(func), retval_ptr, NULL TSRMLS_CC);
+				} else if (UNEXPECTED(!instanceof_function(Z_OBJCE_P(retval_ptr), ce TSRMLS_CC))) {
+					zend_return_type_error(E_RECOVERABLE_ERROR, EX(func), retval_ptr, NULL TSRMLS_CC);
+				}
+				break;
+
+			case IS_CALLABLE:
+				if (UNEXPECTED(!zend_is_callable_ex(retval_ptr, NULL, IS_CALLABLE_CHECK_SILENT, NULL, NULL, NULL TSRMLS_CC))) {
+					zend_return_type_error(E_RECOVERABLE_ERROR, EX(func), retval_ptr, NULL TSRMLS_CC);
+				}
+				break;
+
+			case IS_ARRAY:
+				if (UNEXPECTED(Z_TYPE_P(retval_ptr) != IS_ARRAY)) {
+					zend_return_type_error(E_RECOVERABLE_ERROR, EX(func), retval_ptr, NULL TSRMLS_CC);
+				}
+				break;
+		}
+	}
+	ZEND_VM_NEXT_OPCODE();
 }
 
 static int ZEND_FASTCALL  ZEND_FETCH_CLASS_SPEC_CV_HANDLER(ZEND_OPCODE_HANDLER_ARGS)
@@ -47986,6 +48076,31 @@ void zend_init_opcodes_handlers(void)
   	ZEND_COALESCE_SPEC_CV_HANDLER,
   	ZEND_COALESCE_SPEC_CV_HANDLER,
   	ZEND_COALESCE_SPEC_CV_HANDLER,
+  	ZEND_NULL_HANDLER,
+  	ZEND_NULL_HANDLER,
+  	ZEND_VERIFY_RETURN_TYPE_SPEC_VAR_HANDLER,
+  	ZEND_VERIFY_RETURN_TYPE_SPEC_UNUSED_HANDLER,
+  	ZEND_NULL_HANDLER,
+  	ZEND_NULL_HANDLER,
+  	ZEND_NULL_HANDLER,
+  	ZEND_VERIFY_RETURN_TYPE_SPEC_VAR_HANDLER,
+  	ZEND_VERIFY_RETURN_TYPE_SPEC_UNUSED_HANDLER,
+  	ZEND_NULL_HANDLER,
+  	ZEND_NULL_HANDLER,
+  	ZEND_NULL_HANDLER,
+  	ZEND_VERIFY_RETURN_TYPE_SPEC_VAR_HANDLER,
+  	ZEND_VERIFY_RETURN_TYPE_SPEC_UNUSED_HANDLER,
+  	ZEND_NULL_HANDLER,
+  	ZEND_NULL_HANDLER,
+  	ZEND_NULL_HANDLER,
+  	ZEND_VERIFY_RETURN_TYPE_SPEC_VAR_HANDLER,
+  	ZEND_VERIFY_RETURN_TYPE_SPEC_UNUSED_HANDLER,
+  	ZEND_NULL_HANDLER,
+  	ZEND_NULL_HANDLER,
+  	ZEND_NULL_HANDLER,
+  	ZEND_VERIFY_RETURN_TYPE_SPEC_VAR_HANDLER,
+  	ZEND_VERIFY_RETURN_TYPE_SPEC_UNUSED_HANDLER,
+  	ZEND_NULL_HANDLER,
   	ZEND_NULL_HANDLER
   };
   zend_opcode_handlers = (opcode_handler_t*)labels;

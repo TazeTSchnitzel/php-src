@@ -21,6 +21,7 @@
 #include "zend_API.h"
 #include "zend_compile.h"
 #include "zend_execute.h"
+#include "zend_inheritance.h"
 #include "zend_smart_str.h"
 
 static void ptr_dtor(zval *zv) /* {{{ */
@@ -467,8 +468,24 @@ static zend_string *zend_get_function_declaration(zend_function *fptr TSRMLS_DC)
 			arg_info++;
 		}
 	}
-
 	smart_str_appendc(&str, ')');
+
+	if (fptr->common.return_type.kind) {
+		smart_str_appends(&str, ": ");
+
+		switch (fptr->common.return_type.kind) {
+			case IS_OBJECT:
+				smart_str_appends(&str, fptr->common.return_type.name->val);
+			break;
+
+			default: {
+				char *type = zend_get_type_by_const(fptr->common.return_type.kind);
+				if (type) {
+					smart_str_appends(&str, type);
+				}
+			}
+		}
+	}
 	smart_str_0(&str);
 
 	return str.s;
@@ -914,6 +931,7 @@ ZEND_API void zend_do_implement_interface(zend_class_entry *ce, zend_class_entry
 
 		do_implement_interface(ce, iface TSRMLS_CC);
 		zend_do_inherit_interfaces(ce, iface TSRMLS_CC);
+		zend_verify_class_return_type_variance(ce, iface TSRMLS_CC);
 	}
 }
 /* }}} */
@@ -1547,6 +1565,65 @@ ZEND_API void zend_do_bind_traits(zend_class_entry *ce TSRMLS_DC) /* {{{ */
 	if (ce->ce_flags & ZEND_ACC_IMPLICIT_ABSTRACT_CLASS) {
 		ce->ce_flags -= ZEND_ACC_IMPLICIT_ABSTRACT_CLASS;
 	}
+}
+/* }}} */
+
+static void zend_verify_method_return_type_variance(zend_function *child, zend_function *parent TSRMLS_DC) /* {{{ */
+{
+	/* If the parent does not have a return type a child may specify one */
+	if (parent->common.return_type.kind == IS_UNDEF) {
+		return;
+	}
+	if (child->common.return_type.kind == IS_UNDEF) {
+		zend_string *method_prototype = zend_get_function_declaration(parent TSRMLS_CC);
+		zend_error(E_COMPILE_ERROR, "Declaration of %s::%s should be compatible with %s, return type missing", ZEND_FN_SCOPE_NAME(child), child->common.function_name->val, method_prototype->val);
+		zend_string_free(method_prototype);
+	} else if (child->common.return_type.kind != parent->common.return_type.kind) {
+		zend_string *method_prototype = zend_get_function_declaration(parent TSRMLS_CC);
+		zend_error(E_COMPILE_ERROR, "Declaration of %s::%s should be compatible with %s, return type mismatch", ZEND_FN_SCOPE_NAME(child), child->common.function_name->val, method_prototype->val);
+		zend_string_free(method_prototype);
+	} else if (child->common.return_type.kind == IS_OBJECT) {
+		zend_class_entry *child_ce;
+		zend_class_entry *parent_ce;
+		if (zend_string_equals_literal_ci(child->common.return_type.name, "parent")) {
+			assert(child->common.scope && child->common.scope->parent);
+			child_ce = child->common.scope->parent;
+		} else if (zend_string_equals_literal_ci(child->common.return_type.name, "self")) {
+			assert(child->common.scope);
+			child_ce = child->common.scope;
+		} else {
+			child_ce = zend_fetch_class_by_name(child->common.return_type.name, NULL, 0 TSRMLS_CC);
+		}
+		if (zend_string_equals_literal_ci(parent->common.return_type.name, "parent")) {
+			assert(parent->common.scope && parent->common.scope->parent);
+			parent_ce = parent->common.scope->parent;
+		} else if (zend_string_equals_literal_ci(parent->common.return_type.name, "self")) {
+			assert(parent->common.scope);
+			parent_ce = parent->common.scope;
+		} else {
+			parent_ce = zend_fetch_class_by_name(parent->common.return_type.name, NULL, 0 TSRMLS_CC);
+		}
+
+		if (!instanceof_function(child_ce, parent_ce TSRMLS_CC)) {
+			zend_string *method_prototype = zend_get_function_declaration(parent TSRMLS_CC);
+			zend_error(E_COMPILE_ERROR, "Declaration of %s::%s should be compatible with %s, return type mismatch", ZEND_FN_SCOPE_NAME(child), child->common.function_name->val, method_prototype->val);
+			zend_string_free(method_prototype);
+		}
+	}
+}
+/* }}} */
+
+void zend_verify_class_return_type_variance(zend_class_entry *child_ce, zend_class_entry *parent_ce TSRMLS_DC) /* {{{ */
+{
+	zend_function *child;
+	zend_function *parent;
+	zend_string *key;
+	ZEND_HASH_FOREACH_STR_KEY_PTR(&child_ce->function_table, key, child) {
+		parent = zend_hash_find_ptr(&parent_ce->function_table, key);
+		if (parent) {
+			zend_verify_method_return_type_variance(child, parent TSRMLS_CC);
+		}
+	} ZEND_HASH_FOREACH_END();
 }
 /* }}} */
 

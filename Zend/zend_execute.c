@@ -78,6 +78,7 @@ static const zend_internal_function zend_pass_function = {
 	0,                      /* num_args          */
 	0,                      /* required_num_args */
 	NULL,                   /* arg_info          */
+	{NULL, IS_UNDEF},       /* return_type       */
 	ZEND_FN(pass),          /* handler           */
 	NULL                    /* module            */
 };
@@ -545,6 +546,60 @@ static inline zval* make_real_object(zval *object_ptr TSRMLS_DC)
 		}
 	}
 	return object;
+}
+
+ZEND_API void zend_return_type_error(int type, zend_function *function, zval *returned, const char *message TSRMLS_DC) {
+	char *scope = NULL;
+	char *expected = NULL;
+	char *got = NULL;
+	char *ftype = (function->common.fn_flags & ZEND_ACC_GENERATOR) ? "generator" : "function";
+
+	if (function->common.scope) {
+		zend_spprintf(&scope, 0, "%s::%s",
+			ZEND_FN_SCOPE_NAME(function),
+			function->common.function_name->val);
+	} else scope = estrdup(function->common.function_name->val);
+
+	switch (function->common.return_type.kind) {
+	    case IS_OBJECT: zend_spprintf(&expected, 0, "an object of class %s", function->common.return_type.name->val); break;
+		case IS_ARRAY: zend_spprintf(&expected, 0, "an array"); break;
+		default:
+			zend_spprintf(&expected, 0, "a %s", zend_get_type_by_const(function->common.return_type.kind));
+	}
+
+	if (message) {
+		zend_error(type, "The %s %s was expected to return %s, %s", ftype, scope, expected, message);
+		efree(scope);
+		efree(expected);
+		return;
+	}
+
+	if (!returned) {
+		got = "nothing";
+	} else {
+		if (Z_TYPE_P(returned) == IS_OBJECT) {
+			zend_spprintf(&got, 0, "an object of class %s", Z_OBJCE_P(returned)->name->val);
+		} else switch (Z_TYPE_P(returned)) {
+			case IS_NULL:
+				got = estrdup("null");
+			break;
+
+			case IS_LONG:
+			case IS_ARRAY: {
+				zend_spprintf(&got, 0, "an %s", zend_zval_type_name(returned));
+			} break;
+
+			default:
+				zend_spprintf(&got, 0, "a %s", zend_zval_type_name(returned));
+		}
+	}
+
+	zend_error(type, "The %s %s was expected to return %s and returned %s", ftype, scope, expected, got);
+
+	efree(scope);
+	efree(expected);
+	if (returned)
+		efree(got);
 }
 
 ZEND_API char * zend_verify_arg_class_kind(const zend_arg_info *cur_arg_info, char **class_name, zend_class_entry **pce TSRMLS_DC)
