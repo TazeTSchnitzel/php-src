@@ -766,7 +766,7 @@ ZEND_API int _z_param_class(zval *arg, zend_class_entry **pce, int num, int chec
 		if (UNEXPECTED(error_code != ZPP_ERROR_OK)) { \
 			if (!(_flags & ZEND_PARSE_PARAMS_QUIET)) { \
 				if (error_code == ZPP_ERROR_WRONG_CALLBACK) { \
-					zend_wrong_callback_error(E_WARNING, _i, _error TSRMLS_CC); \
+					zend_wrong_callback_error(E_RECOVERABLE_ERROR, _i, _error TSRMLS_CC); \
 				} else if (error_code == ZPP_ERROR_WRONG_CLASS) { \
 					zend_wrong_paramer_class_error(_i, _error, _arg TSRMLS_CC); \
 				} else if (error_code == ZPP_ERROR_WRONG_ARG) { \
