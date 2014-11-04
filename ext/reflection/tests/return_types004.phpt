@@ -16,7 +16,7 @@ $func = function(): array {
 
 $rf = new ReflectionFunction($func);
 $rt = $rf->getReturnType();
-var_dump($rt->getKind() == $rt::IS_ARRAY);
+var_dump($rt->getTypeConstant() == $rt::TYPE_ARRAY);
 var_dump((string) $rt);
 var_dump((string) $rt === $rt->getName());
 

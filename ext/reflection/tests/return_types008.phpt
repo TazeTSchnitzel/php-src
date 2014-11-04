@@ -18,7 +18,7 @@ class A {
 
 $rc = new ReflectionClass("A");
 $rt = $rc->getMethod("foo")->getReturnType();
-var_dump($rt->getKind() == $rt::IS_ARRAY);
+var_dump($rt->getTypeConstant() == $rt::TYPE_ARRAY);
 var_dump((string) $rt);
 var_dump((string) $rt === $rt->getName());
 

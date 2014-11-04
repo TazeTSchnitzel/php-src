@@ -5707,7 +5707,7 @@ ZEND_METHOD(reflection_type, export)
 /* }}} */
 
 /* {{{ */
-ZEND_METHOD(reflection_type, getKind) 
+ZEND_METHOD(reflection_type, getTypeConstant) 
 {
 	reflection_object *intern;
 	zend_type_decl *type;
@@ -6163,7 +6163,7 @@ static const zend_function_entry reflection_type_functions[] = {
 	ZEND_ME(reflection_type, __toString, arginfo_reflection__void, ZEND_ACC_PUBLIC)
 	ZEND_MALIAS(reflection_type, getName, __toString, arginfo_reflection__void, ZEND_ACC_PUBLIC)
 
-	ZEND_ME(reflection_type, getKind, arginfo_reflection__void, 0)
+	ZEND_ME(reflection_type, getTypeConstant, arginfo_reflection__void, 0)
 	PHP_FE_END
 };
 /* }}} */
@@ -6287,10 +6287,10 @@ PHP_MINIT_FUNCTION(reflection) /* {{{ */
 	reflection_type_ptr = zend_register_internal_class(&_reflection_entry TSRMLS_CC);
 	zend_class_implements(reflection_type_ptr TSRMLS_CC, 1, reflector_ptr);
 
-	REGISTER_REFLECTION_CLASS_CONST_LONG(type, "IS_UNDECLARED", IS_UNDEF);
-	REGISTER_REFLECTION_CLASS_CONST_LONG(type, "IS_ARRAY", IS_ARRAY);
-	REGISTER_REFLECTION_CLASS_CONST_LONG(type, "IS_CALLABLE", IS_CALLABLE);
-	REGISTER_REFLECTION_CLASS_CONST_LONG(type, "IS_OBJECT", IS_OBJECT);
+	REGISTER_REFLECTION_CLASS_CONST_LONG(type, "TYPE_UNDECLARED", IS_UNDEF);
+	REGISTER_REFLECTION_CLASS_CONST_LONG(type, "TYPE_ARRAY", IS_ARRAY);
+	REGISTER_REFLECTION_CLASS_CONST_LONG(type, "TYPE_CALLABLE", IS_CALLABLE);
+	REGISTER_REFLECTION_CLASS_CONST_LONG(type, "TYPE_OBJECT", IS_OBJECT);
 
 	return SUCCESS;
 } /* }}} */
