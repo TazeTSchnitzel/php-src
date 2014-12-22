@@ -474,6 +474,7 @@ static void executor_globals_ctor(zend_executor_globals *executor_globals) /* {{
 	ZVAL_UNDEF(&EG(user_error_handler));
 	ZVAL_UNDEF(&EG(user_exception_handler));
 	EG(in_autoload) = NULL;
+	EG(function_autoload_functions) = NULL;
 	EG(current_execute_data) = NULL;
 	EG(current_module) = NULL;
 	EG(exit_status) = 0;

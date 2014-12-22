@@ -81,6 +81,11 @@ PHP_FUNCTION(class_uses);
 
 PHPAPI zend_string *php_spl_object_hash(zval *obj);
 
+PHPAPI void spl_autoload_call(zval *class_name, zend_string *lc_name, zend_long type);
+
+#define SPL_AUTOLOAD_CLASS 1 
+#define SPL_AUTOLOAD_FUNCTION 2 
+
 #endif /* PHP_SPL_H */
 
 /*

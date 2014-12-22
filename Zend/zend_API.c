@@ -2913,7 +2913,7 @@ static int zend_is_callable_check_func(int check_flags, zval *callable, zend_fca
 		}
 		/* Check if function with given name exists.
 		 * This may be a compound name that includes namespace name */
-		if (EXPECTED((fcc->function_handler = zend_hash_find_ptr(EG(function_table), lmname)) != NULL)) {
+		if (EXPECTED((fcc->function_handler = zend_lookup_function(lmname)) != NULL)) {
 			if (lmname != Z_STR_P(callable)) {
 				STR_ALLOCA_FREE(lmname, use_heap);
 			}

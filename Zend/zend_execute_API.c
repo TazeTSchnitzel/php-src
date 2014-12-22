@@ -26,6 +26,7 @@
 #include "zend_compile.h"
 #include "zend_execute.h"
 #include "zend_API.h"
+#include "zend_interfaces.h"
 #include "zend_stack.h"
 #include "zend_constants.h"
 #include "zend_extensions.h"
@@ -37,6 +38,9 @@
 #ifdef HAVE_SYS_TIME_H
 #include <sys/time.h>
 #endif
+#include "ext/spl/php_spl.h"
+
+const char* VALID_IDENTIFIER_CHARS = "0123456789_abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ\177\200\201\202\203\204\205\206\207\210\211\212\213\214\215\216\217\220\221\222\223\224\225\226\227\230\231\232\233\234\235\236\237\240\241\242\243\244\245\246\247\250\251\252\253\254\255\256\257\260\261\262\263\264\265\266\267\270\271\272\273\274\275\276\277\300\301\302\303\304\305\306\307\310\311\312\313\314\315\316\317\320\321\322\323\324\325\326\327\330\331\332\333\334\335\336\337\340\341\342\343\344\345\346\347\350\351\352\353\354\355\356\357\360\361\362\363\364\365\366\367\370\371\372\373\374\375\376\377\\";
 
 ZEND_API void (*zend_execute_ex)(zend_execute_data *execute_data);
 ZEND_API void (*zend_execute_internal)(zend_execute_data *execute_data, zval *return_value);
@@ -148,6 +152,7 @@ void init_executor(void) /* {{{ */
 
 	EG(in_autoload) = NULL;
 	EG(autoload_func) = NULL;
+	EG(function_autoload_functions) = NULL;
 	EG(error_handling) = EH_NORMAL;
 
 	zend_vm_stack_init();
@@ -368,6 +373,10 @@ void shutdown_executor(void) /* {{{ */
 		if (EG(in_autoload)) {
 			zend_hash_destroy(EG(in_autoload));
 			FREE_HASHTABLE(EG(in_autoload));
+		}
+		if (EG(function_autoload_functions)) {
+			zend_hash_destroy(EG(function_autoload_functions));
+			FREE_HASHTABLE(EG(function_autoload_functions));
 		}
 	} zend_end_try();
 
@@ -913,6 +922,100 @@ int zend_call_function(zend_fcall_info *fci, zend_fcall_info_cache *fci_cache) /
 }
 /* }}} */
 
+/* matches ext/spl/php_spl.c
+typedef struct {
+	zend_function *func_ptr;
+	zval obj;
+	zval closure;
+	zend_class_entry *ce;
+} autoload_func_info;
+*/
+
+ZEND_API zend_function *zend_lookup_function_ex(zend_string *name, const zval *key, int use_autoload) /* {{{ */
+{
+	zend_function *func = NULL;
+	zend_string *lc_name;
+	zval name_zval;
+
+	if (key) {
+		lc_name = Z_STR_P(key);
+	} else {
+		if (name == NULL || !name->len) {
+			return NULL;
+		}
+
+		if (name->val[0] == '\\') {
+			lc_name = zend_string_alloc(name->len - 1, 0);
+			zend_str_tolower_copy(lc_name->val, name->val + 1, name->len - 1);
+		} else {
+			lc_name = zend_string_alloc(name->len, 0);
+			zend_str_tolower_copy(lc_name->val, name->val, name->len);
+		}
+	}
+
+	func = zend_hash_find_ptr(EG(function_table), lc_name);
+	if (func) {
+		if (!key) {
+			zend_string_free(lc_name);
+		}
+		return func;
+	}
+
+	/* The compiler is not-reentrant. Make sure we autoload only during run-time
+	*/
+	if (!use_autoload || zend_is_compiling()) {
+		if (!key) {
+			zend_string_free(lc_name);
+		}
+		return NULL;
+	}
+
+	if (!EG(function_autoload_functions)) {
+		if (!key) {
+			zend_string_free(lc_name);
+		}
+		return NULL;
+	}
+	
+	/* Verify function name before passing it to __autoload() */
+	if (strspn(name->val, VALID_IDENTIFIER_CHARS) != name->len) {
+		if (!key) {
+			zend_string_free(lc_name);
+		}
+		return NULL;
+	}
+	
+	if (EG(in_autoload) == NULL) {
+		ALLOC_HASHTABLE(EG(in_autoload));
+		zend_hash_init(EG(in_autoload), 8, NULL, NULL, 0);
+	}
+
+	if (zend_hash_add_empty_element(EG(in_autoload), lc_name) == NULL) {
+		if (!key) {
+			zend_string_free(lc_name);
+		}
+		return NULL;
+	}
+
+	ZVAL_STR(&name_zval, name);
+
+	spl_autoload_call(&name_zval, lc_name, SPL_AUTOLOAD_FUNCTION);
+
+	zend_hash_del(EG(in_autoload), lc_name);
+
+	func = zend_hash_find_ptr(EG(function_table), lc_name);
+	if (!key) {
+		zend_string_free(lc_name);
+	}
+	return func;
+}
+/* }}} */
+
+ZEND_API zend_function *zend_lookup_function(zend_string *name) /* {{{ */
+{
+	return zend_lookup_function_ex(name, NULL, 1);
+}
+
 ZEND_API zend_class_entry *zend_lookup_class_ex(zend_string *name, const zval *key, int use_autoload) /* {{{ */
 {
 	zend_class_entry *ce = NULL;
@@ -971,7 +1074,7 @@ ZEND_API zend_class_entry *zend_lookup_class_ex(zend_string *name, const zval *k
 	}
 	
 	/* Verify class name before passing it to __autoload() */
-	if (strspn(name->val, "0123456789_abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ\177\200\201\202\203\204\205\206\207\210\211\212\213\214\215\216\217\220\221\222\223\224\225\226\227\230\231\232\233\234\235\236\237\240\241\242\243\244\245\246\247\250\251\252\253\254\255\256\257\260\261\262\263\264\265\266\267\270\271\272\273\274\275\276\277\300\301\302\303\304\305\306\307\310\311\312\313\314\315\316\317\320\321\322\323\324\325\326\327\330\331\332\333\334\335\336\337\340\341\342\343\344\345\346\347\350\351\352\353\354\355\356\357\360\361\362\363\364\365\366\367\370\371\372\373\374\375\376\377\\") != name->len) {
+	if (strspn(name->val, VALID_IDENTIFIER_CHARS) != name->len) {
 		if (!key) {
 			zend_string_free(lc_name);
 		}

@@ -183,6 +183,7 @@ struct _zend_executor_globals {
 
 	HashTable *in_autoload;
 	zend_function *autoload_func;
+	HashTable *function_autoload_functions;
 	zend_bool full_tables_cleanup;
 
 	/* for extended information support */
