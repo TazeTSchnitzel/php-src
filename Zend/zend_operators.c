@@ -2618,7 +2618,7 @@ ZEND_API zend_string *zend_long_to_str(zend_long num) /* {{{ */
 /* }}} */
 
 ZEND_API zend_uchar is_numeric_str_function(const zend_string *str, zend_long *lval, double *dval) {
-    return is_numeric_string_ex(str->val, str->len, lval, dval, -1, NULL);
+    return is_numeric_string_ex(str->val, str->len, lval, dval, 0, NULL);
 }
 
 ZEND_API zend_uchar _is_numeric_string_ex(const char *str, size_t length, zend_long *lval, double *dval, int allow_errors, int *oflow_info)
