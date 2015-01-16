@@ -401,8 +401,9 @@ static void json_escape_string(smart_str *buf, char *s, size_t len, int options)
 		double d;
 		int type;
 		zend_long p;
+		zend_bigint *big;
 
-		if ((type = is_numeric_string(s, len, &p, &d, 0)) != 0) {
+		if ((type = is_numeric_string(s, len, &p, &d, &big, 0)) != 0) {
 			if (type == IS_LONG) {
 				smart_str_append_long(buf, p);
 			} else if (type == IS_DOUBLE) {
@@ -415,6 +416,8 @@ static void json_escape_string(smart_str *buf, char *s, size_t len, int options)
 					JSON_G(error_code) = PHP_JSON_ERROR_INF_OR_NAN;
 					smart_str_appendc(buf, '0');
 				}
+			} else if (type == IS_BIGINT) {
+				smart_str_append_bigint(buf, big);
 			}
 			return;
 		}
@@ -625,6 +628,10 @@ again:
 			smart_str_append_long(buf, Z_LVAL_P(val));
 			break;
 
+		case IS_BIGINT:
+			smart_str_append_bigint(buf, Z_BIG_P(val));
+			break;
+
 		case IS_DOUBLE:
 			{
 				char *d = NULL;
@@ -700,6 +707,7 @@ PHP_JSON_API void php_json_decode_ex(zval *return_value, char *str, size_t str_l
 		zend_long p;
 		char *trim = str;
 		int trim_len = str_len;
+		zend_bigint *big;
 
 		zval_dtor(return_value);
 
@@ -728,7 +736,7 @@ PHP_JSON_API void php_json_decode_ex(zval *return_value, char *str, size_t str_l
 			RETVAL_BOOL(0);
 		}
 
-		if ((type = is_numeric_string_ex(trim, trim_len, &p, &d, 0, &overflow_info)) != 0) {
+		if ((type = is_numeric_string_ex(trim, trim_len, &p, &d, &big, 0, &overflow_info)) != 0) {
 			if (type == IS_LONG) {
 				RETVAL_LONG(p);
 			} else if (type == IS_DOUBLE) {
@@ -758,6 +766,9 @@ PHP_JSON_API void php_json_decode_ex(zval *return_value, char *str, size_t str_l
 				} else {
 					RETVAL_DOUBLE(d);
 				}
+			} else if (type == IS_BIGINT) {
+				/* XXX doube/bigint decode needs to be fixed */
+				RETVAL_BIGINT(big);
 			}
 		}
 
