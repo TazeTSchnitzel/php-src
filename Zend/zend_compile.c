@@ -239,6 +239,7 @@ void zend_init_compiler_data_structures(void) /* {{{ */
 	CG(current_import_const) = NULL;
 	zend_hash_init(&CG(const_filenames), 8, NULL, NULL, 0);
 	init_compiler_declarables();
+	CG(not_first_token) = 0;
 	zend_stack_init(&CG(context_stack), sizeof(CG(context)));
 
 	CG(encoding_declared) = 0;
@@ -1403,10 +1404,17 @@ again:
 	ZVAL_UNDEF(&zv);
 	retval = lex_scan(&zv);
 	switch (retval) {
+		case T_OPEN_TAG_STRICT:
+			if (CG(not_first_token)) {
+				zend_error_noreturn(E_COMPILE_ERROR, "Strict mode opening tag must not be preceded by anything else");
+			}
+			CG(declarables).strict_types = 1;
+			/* intentional fall-through */
 		case T_COMMENT:
 		case T_DOC_COMMENT:
 		case T_OPEN_TAG:
 		case T_WHITESPACE:
+			CG(not_first_token) = 1;
 			goto again;
 
 		case T_CLOSE_TAG:
@@ -1422,6 +1430,7 @@ again:
 	if (Z_TYPE(zv) != IS_UNDEF) {
 		elem->ast = zend_ast_create_zval(&zv);
 	}
+	CG(not_first_token) = 1;
 
 	return retval;
 }
@@ -1598,6 +1607,8 @@ void zend_do_end_compilation(void) /* {{{ */
 	zend_end_namespace();
 	/* strict typehinting is per-file */
 	CG(declarables).strict_types = 0;
+	/* seen open tag check is per-file */
+	CG(not_first_token) = 0;
 }
 /* }}} */
 

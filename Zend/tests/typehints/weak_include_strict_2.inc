@@ -1,6 +1,6 @@
-<?php
+<?php strict
 
-declare(strict_types=1);
+
 
 function takes_int(int $x) {
     echo "Success!";

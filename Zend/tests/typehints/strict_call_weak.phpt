@@ -1,9 +1,9 @@
 --TEST--
-strict_types=1 code calling strict_types=0 code
+strict code calling weak code
 --FILE--
-<?php
+<?php strict
 
-declare(strict_types=1);
+
 
 // file that's implicitly weak
 require 'strict_call_weak_2.inc';

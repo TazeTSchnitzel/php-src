@@ -94,6 +94,7 @@ struct _zend_compiler_globals {
 	zend_bool short_tags;
 
 	zend_declarables declarables;
+	zend_bool not_first_token;
 
 	zend_bool unclean_shutdown;
 

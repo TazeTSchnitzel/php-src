@@ -1747,17 +1747,32 @@ string:
 }
 
 
+<INITIAL>"<?php"{TABS_AND_SPACES}"strict"{NEWLINE} {
+	HANDLE_NEWLINE(yytext[yyleng-1]);
+	BEGIN(ST_IN_SCRIPTING);
+	return T_OPEN_TAG_STRICT;
+}
+
 <INITIAL>"<?php"([ \t]|{NEWLINE}) {
 	HANDLE_NEWLINE(yytext[yyleng-1]);
 	BEGIN(ST_IN_SCRIPTING);
 	return T_OPEN_TAG;
 }
 
-
 <INITIAL>"<?" {
 	if (CG(short_tags)) {
 		BEGIN(ST_IN_SCRIPTING);
 		return T_OPEN_TAG;
+	} else {
+		goto inline_char_handler;
+	}
+}
+
+<INITIAL>"<?"{TABS_AND_SPACES}"strict"{NEWLINE} {
+	HANDLE_NEWLINE(yytext[yyleng-1]);
+	if (CG(short_tags)) {
+		BEGIN(ST_IN_SCRIPTING);
+		return T_OPEN_TAG_STRICT;
 	} else {
 		goto inline_char_handler;
 	}

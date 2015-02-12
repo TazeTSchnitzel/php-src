@@ -1,9 +1,9 @@
 --TEST--
 Strict scalar type hint basics
 --FILE--
-<?php
+<?php strict
 
-declare(strict_types=1);
+
 
 $errnames = [
     E_NOTICE => 'E_NOTICE',
