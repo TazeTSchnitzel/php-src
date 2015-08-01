@@ -514,7 +514,7 @@ PHPAPI pcre_cache_entry* pcre_get_compiled_regex_cache(zend_string *regex)
 	if (!ZSTR_IS_INTERNED(regex) || !(GC_FLAGS(regex) & IS_STR_PERMANENT)) {
 		zend_string *str = zend_string_init(ZSTR_VAL(regex), ZSTR_LEN(regex), 1);
 		GC_REFCOUNT(str) = 0; /* will be incremented by zend_hash_update_mem() */
-		ZSTR_H(str) = ZSTR_H(regex);
+		ZSTR_SETH(str, ZSTR_H(regex));
 		regex = str;
 	}
 

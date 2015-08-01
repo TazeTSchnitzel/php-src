@@ -40,7 +40,8 @@ END_EXTERN_C()
 #define ZSTR_VAL(zstr)  (zstr)->val
 #define ZSTR_LEN(zstr)  *(const size_t*)&((zstr)->len)
 #define ZSTR_SETLEN(zstr, newlen) (zstr)->len = (newlen)
-#define ZSTR_H(zstr)    (zstr)->h
+#define ZSTR_H(zstr)    *(const zend_ulong*)&((zstr)->h)
+#define ZSTR_SETH(zstr, newh) (zstr)->h = (newh)
 #define ZSTR_HASH(zstr) zend_string_hash_val(zstr)
 
 /* Compatibility macros */
@@ -83,14 +84,14 @@ END_EXTERN_C()
 static zend_always_inline zend_ulong zend_string_hash_val(zend_string *s)
 {
 	if (!ZSTR_H(s)) {
-		ZSTR_H(s) = zend_hash_func(ZSTR_VAL(s), ZSTR_LEN(s));
+		ZSTR_SETH(s, zend_hash_func(ZSTR_VAL(s), ZSTR_LEN(s)));
 	}
 	return ZSTR_H(s);
 }
 
 static zend_always_inline void zend_string_forget_hash_val(zend_string *s)
 {
-	ZSTR_H(s) = 0;
+	ZSTR_SETH(s, 0);
 }
 
 static zend_always_inline uint32_t zend_string_refcount(const zend_string *s)
