@@ -5677,7 +5677,7 @@ static zend_bool zend_try_ct_eval_magic_const(zval *zv, zend_ast *ast) /* {{{ */
 #endif
 			}
 
-			ZSTR_LEN(dirname) = strlen(ZSTR_VAL(dirname));
+			ZSTR_SETLEN(dirname, strlen(ZSTR_VAL(dirname)));
 			ZVAL_STR(zv, dirname);
 			break;
 		}

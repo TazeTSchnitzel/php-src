@@ -2191,10 +2191,10 @@ static HashTable *date_object_get_properties(zval *object) /* {{{ */
 				zend_string *tmpstr = zend_string_alloc(sizeof("UTC+05:00")-1, 0);
 				timelib_sll utc_offset = dateobj->time->z;
 
-				ZSTR_LEN(tmpstr) = snprintf(ZSTR_VAL(tmpstr), sizeof("+05:00"), "%c%02d:%02d",
+				ZSTR_SETLEN(tmpstr, snprintf(ZSTR_VAL(tmpstr), sizeof("+05:00"), "%c%02d:%02d",
 					utc_offset > 0 ? '-' : '+',
 					abs(utc_offset / 60),
-					abs((utc_offset % 60)));
+					abs((utc_offset % 60))));
 
 				ZVAL_NEW_STR(&zv, tmpstr);
 				}
@@ -2283,10 +2283,10 @@ static HashTable *date_object_get_properties_timezone(zval *object) /* {{{ */
 		case TIMELIB_ZONETYPE_OFFSET: {
 			zend_string *tmpstr = zend_string_alloc(sizeof("UTC+05:00")-1, 0);
 
-			ZSTR_LEN(tmpstr) = snprintf(ZSTR_VAL(tmpstr), sizeof("+05:00"), "%c%02d:%02d",
+			ZSTR_SETLEN(tmpstr, snprintf(ZSTR_VAL(tmpstr), sizeof("+05:00"), "%c%02d:%02d",
 			tzobj->tzi.utc_offset > 0 ? '-' : '+',
 			abs(tzobj->tzi.utc_offset / 60),
-			abs((tzobj->tzi.utc_offset % 60)));
+			abs((tzobj->tzi.utc_offset % 60))));
 
 			ZVAL_NEW_STR(&zv, tmpstr);
 			}
@@ -3744,10 +3744,10 @@ PHP_FUNCTION(timezone_name_get)
 			zend_string *tmpstr = zend_string_alloc(sizeof("UTC+05:00")-1, 0);
 			timelib_sll utc_offset = tzobj->tzi.utc_offset;
 
-			ZSTR_LEN(tmpstr) = snprintf(ZSTR_VAL(tmpstr), sizeof("+05:00"), "%c%02d:%02d",
+			ZSTR_SETLEN(tmpstr, snprintf(ZSTR_VAL(tmpstr), sizeof("+05:00"), "%c%02d:%02d",
 				utc_offset > 0 ? '-' : '+',
 				abs(utc_offset / 60),
-				abs((utc_offset % 60)));
+				abs((utc_offset % 60))));
 
 			RETURN_NEW_STR(tmpstr);
 			}

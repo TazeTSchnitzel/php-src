@@ -446,7 +446,7 @@ static void smart_str_append_escaped(smart_str *str, const char *s, size_t l) {
 
 	smart_str_alloc(str, len, 0);
 	res = &ZSTR_VAL(str->s)[ZSTR_LEN(str->s)];
-	ZSTR_LEN(str->s) += len;
+	ZSTR_SETLEN(str->s, ZSTR_LEN(str->s) + len);
 
 	for (i = 0; i < l; ++i) {
 		unsigned char c = s[i];
@@ -586,7 +586,7 @@ static void _build_trace_string(smart_str *str, HashTable *ht, uint32_t num) /* 
 			} ZEND_HASH_FOREACH_END();
 
 			if (last_len != ZSTR_LEN(str->s)) {
-				ZSTR_LEN(str->s) -= 2; /* remove last ', ' */
+				ZSTR_SETLEN(str->s, ZSTR_LEN(str->s) - 2); /* remove last ', ' */
 			}
 		} else {
 			zend_error(E_WARNING, "args element is no array");

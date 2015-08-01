@@ -1665,7 +1665,7 @@ PHP_FUNCTION(dirname)
 
 	if (levels == 1) {
 		/* Defaut case */
-		ZSTR_LEN(ret) = zend_dirname(ZSTR_VAL(ret), str_len);
+		ZSTR_SETLEN(ret, zend_dirname(ZSTR_VAL(ret), str_len));
 	} else if (levels < 1) {
 		php_error_docref(NULL, E_WARNING, "Invalid argument, levels must be >= 1");
 		zend_string_free(ret);
@@ -1673,7 +1673,7 @@ PHP_FUNCTION(dirname)
 	} else {
 		/* Some levels up */
 		do {
-			ZSTR_LEN(ret) = zend_dirname(ZSTR_VAL(ret), str_len = ZSTR_LEN(ret));
+			ZSTR_SETLEN(ret, zend_dirname(ZSTR_VAL(ret), str_len = ZSTR_LEN(ret)));
 		} while (ZSTR_LEN(ret) < str_len && --levels);
 	}
 
@@ -2312,7 +2312,7 @@ static zend_string *php_chunk_split(char *src, size_t srclen, char *end, size_t 
 	}
 
 	*q = '\0';
-	ZSTR_LEN(dest) = q - ZSTR_VAL(dest);
+	ZSTR_SETLEN(dest, q - ZSTR_VAL(dest));
 
 	return dest;
 }
@@ -3621,7 +3621,7 @@ PHPAPI void php_stripslashes(zend_string *str)
 	while (l > 0) {
 		if (*t == '\\') {
 			t++;				/* skip the slash */
-			ZSTR_LEN(str)--;
+			ZSTR_SETLEN(str, ZSTR_LEN(str) - 1);
 			l--;
 			if (l > 0) {
 				if (*t == '0') {
@@ -3796,7 +3796,7 @@ PHPAPI void php_stripcslashes(zend_string *str)
 		*target='\0';
 	}
 
-	ZSTR_LEN(str) = nlen;
+	ZSTR_SETLEN(str, nlen);
 }
 /* }}} */
 
@@ -3915,7 +3915,7 @@ do_escape:
 	if (ZSTR_LEN(new_str) - (target - ZSTR_VAL(new_str)) > 16) {
 		new_str = zend_string_truncate(new_str, target - ZSTR_VAL(new_str), 0);
 	} else {
-		ZSTR_LEN(new_str) = target - ZSTR_VAL(new_str);
+		ZSTR_SETLEN(new_str, target - ZSTR_VAL(new_str));
 	}
 
 	return new_str;
@@ -4463,7 +4463,7 @@ PHP_FUNCTION(strip_tags)
 	}
 
 	buf = zend_string_init(ZSTR_VAL(str), ZSTR_LEN(str), 0);
-	ZSTR_LEN(buf) = php_strip_tags_ex(ZSTR_VAL(buf), ZSTR_LEN(str), NULL, allowed_tags, allowed_tags_len, 0);
+	ZSTR_SETLEN(buf, php_strip_tags_ex(ZSTR_VAL(buf), ZSTR_LEN(str), NULL, allowed_tags, allowed_tags_len, 0));
 	RETURN_NEW_STR(buf);
 }
 /* }}} */
@@ -5345,7 +5345,7 @@ PHP_FUNCTION(str_pad)
 	}
 
 	result = zend_string_alloc(ZSTR_LEN(input) + num_pad_chars, 0);
-	ZSTR_LEN(result) = 0;
+	ZSTR_SETLEN(result, 0);
 
 	/* We need to figure out the left/right padding lengths. */
 	switch (pad_type_val) {
@@ -5366,16 +5366,20 @@ PHP_FUNCTION(str_pad)
 	}
 
 	/* First we pad on the left. */
-	for (i = 0; i < left_pad; i++)
-		ZSTR_VAL(result)[ZSTR_LEN(result)++] = pad_str[i % pad_str_len];
+	for (i = 0; i < left_pad; i++) {
+		ZSTR_VAL(result)[ZSTR_LEN(result)] = pad_str[i % pad_str_len];
+		ZSTR_SETLEN(result, ZSTR_LEN(result) + 1);
+	}
 
 	/* Then we copy the input string. */
 	memcpy(ZSTR_VAL(result) + ZSTR_LEN(result), ZSTR_VAL(input), ZSTR_LEN(input));
-	ZSTR_LEN(result) += ZSTR_LEN(input);
+	ZSTR_SETLEN(result, ZSTR_LEN(result) + ZSTR_LEN(input));
 
 	/* Finally, we pad on the right. */
-	for (i = 0; i < right_pad; i++)
-		ZSTR_VAL(result)[ZSTR_LEN(result)++] = pad_str[i % pad_str_len];
+	for (i = 0; i < right_pad; i++) {
+		ZSTR_VAL(result)[ZSTR_LEN(result)] = pad_str[i % pad_str_len];
+		ZSTR_SETLEN(result, ZSTR_LEN(result) + 1);
+	}
 
 	ZSTR_VAL(result)[ZSTR_LEN(result)] = '\0';
 
@@ -5590,7 +5594,7 @@ PHP_FUNCTION(money_format)
 		zend_string_free(str);
 		RETURN_FALSE;
 	}
-	ZSTR_LEN(str) = (size_t)res_len;
+	ZSTR_SETLEN(str, (size_t)res_len);
 	ZSTR_VAL(str)[ZSTR_LEN(str)] = '\0';
 
 	RETURN_NEW_STR(zend_string_truncate(str, ZSTR_LEN(str), 0));

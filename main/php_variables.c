@@ -306,7 +306,7 @@ static inline int add_post_vars(zval *arr, post_var_data_t *vars, zend_bool eof)
 	}
 
 	if (!eof) {
-		memmove(ZSTR_VAL(vars->str.s), vars->ptr, ZSTR_LEN(vars->str.s) = vars->end - vars->ptr);
+		memmove(ZSTR_VAL(vars->str.s), vars->ptr, ZSTR_SETLEN(vars->str.s, vars->end - vars->ptr));
 	}
 	return SUCCESS;
 }

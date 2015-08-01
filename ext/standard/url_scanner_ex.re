@@ -257,7 +257,7 @@ static inline void handle_tag(STD_PARA)
 	unsigned int i;
 
 	if (ctx->tag.s) {
-		ZSTR_LEN(ctx->tag.s) = 0;
+		ZSTR_SETLEN(ctx->tag.s, 0);
 	}
 	smart_str_appendl(&ctx->tag, start, YYCURSOR - start);
 	for (i = 0; i < ZSTR_LEN(ctx->tag.s); i++)
@@ -271,7 +271,7 @@ static inline void handle_tag(STD_PARA)
 static inline void handle_arg(STD_PARA)
 {
 	if (ctx->arg.s) {
-		ZSTR_LEN(ctx->arg.s) = 0;
+		ZSTR_SETLEN(ctx->arg.s, 0);
 	}
 	smart_str_appendl(&ctx->arg, start, YYCURSOR - start);
 }
@@ -367,7 +367,7 @@ stop:
 	}
 
 	if (rest) memmove(ZSTR_VAL(ctx->buf.s), start, rest);
-	ZSTR_LEN(ctx->buf.s) = rest;
+	ZSTR_SETLEN(ctx->buf.s, rest);
 }
 
 
@@ -539,10 +539,10 @@ PHPAPI int php_url_scanner_add_var(char *name, size_t name_len, char *value, siz
 PHPAPI int php_url_scanner_reset_vars(void)
 {
 	if (BG(url_adapt_state_ex).form_app.s) {
-		ZSTR_LEN(BG(url_adapt_state_ex).form_app.s) = 0;
+		ZSTR_SETLEN(BG(url_adapt_state_ex).form_app.s, 0);
 	}
 	if (BG(url_adapt_state_ex).url_app.s) {
-		ZSTR_LEN(BG(url_adapt_state_ex).url_app.s) = 0;
+		ZSTR_SETLEN(BG(url_adapt_state_ex).url_app.s, 0);
 	}
 
 	return SUCCESS;

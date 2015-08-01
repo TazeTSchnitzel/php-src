@@ -2921,7 +2921,7 @@ SPL_METHOD(SplFileObject, fread)
 	}
 
 	ZVAL_NEW_STR(return_value, zend_string_alloc(length, 0));
-	Z_STRLEN_P(return_value) = php_stream_read(intern->u.file.stream, Z_STRVAL_P(return_value), length);
+	Z_STRSETLEN_P(return_value, php_stream_read(intern->u.file.stream, Z_STRVAL_P(return_value), length));
 
 	/* needed because recv/read/gzread doesnt put a null at the end*/
 	Z_STRVAL_P(return_value)[Z_STRLEN_P(return_value)] = 0;

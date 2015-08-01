@@ -38,7 +38,8 @@ END_EXTERN_C()
 /* Shortcuts */
 
 #define ZSTR_VAL(zstr)  (zstr)->val
-#define ZSTR_LEN(zstr)  (zstr)->len
+#define ZSTR_LEN(zstr)  *(const size_t*)&((zstr)->len)
+#define ZSTR_SETLEN(zstr, newlen) (zstr)->len = (newlen)
 #define ZSTR_H(zstr)    (zstr)->h
 #define ZSTR_HASH(zstr) zend_string_hash_val(zstr)
 
@@ -66,7 +67,7 @@ END_EXTERN_C()
 	GC_REFCOUNT(str) = 1; \
 	GC_TYPE_INFO(str) = IS_STRING; \
 	zend_string_forget_hash_val(str); \
-	ZSTR_LEN(str) = _len; \
+	ZSTR_SETLEN(str, _len); \
 } while (0)
 
 #define ZSTR_ALLOCA_INIT(str, s, len, use_heap) do { \
@@ -130,7 +131,7 @@ static zend_always_inline zend_string *zend_string_alloc(size_t len, int persist
 	GC_INFO(ret) = 0;
 #endif
 	zend_string_forget_hash_val(ret);
-	ZSTR_LEN(ret) = len;
+	ZSTR_SETLEN(ret, len);
 	return ret;
 }
 
@@ -148,7 +149,7 @@ static zend_always_inline zend_string *zend_string_safe_alloc(size_t n, size_t m
 	GC_INFO(ret) = 0;
 #endif
 	zend_string_forget_hash_val(ret);
-	ZSTR_LEN(ret) = (n * m) + l;
+	ZSTR_SETLEN(ret, (n * m) + l);
 	return ret;
 }
 
@@ -185,7 +186,7 @@ static zend_always_inline zend_string *zend_string_realloc(zend_string *s, size_
 	if (!ZSTR_IS_INTERNED(s)) {
 		if (EXPECTED(GC_REFCOUNT(s) == 1)) {
 			ret = (zend_string *)perealloc(s, ZEND_MM_ALIGNED_SIZE(_ZSTR_STRUCT_SIZE(len)), persistent);
-			ZSTR_LEN(ret) = len;
+			ZSTR_SETLEN(ret, len);
 			zend_string_forget_hash_val(ret);
 			return ret;
 		} else {
@@ -205,7 +206,7 @@ static zend_always_inline zend_string *zend_string_extend(zend_string *s, size_t
 	if (!ZSTR_IS_INTERNED(s)) {
 		if (EXPECTED(GC_REFCOUNT(s) == 1)) {
 			ret = (zend_string *)perealloc(s, ZEND_MM_ALIGNED_SIZE(_ZSTR_STRUCT_SIZE(len)), persistent);
-			ZSTR_LEN(ret) = len;
+			ZSTR_SETLEN(ret, len);
 			zend_string_forget_hash_val(ret);
 			return ret;
 		} else {
@@ -225,7 +226,7 @@ static zend_always_inline zend_string *zend_string_truncate(zend_string *s, size
 	if (!ZSTR_IS_INTERNED(s)) {
 		if (EXPECTED(GC_REFCOUNT(s) == 1)) {
 			ret = (zend_string *)perealloc(s, ZEND_MM_ALIGNED_SIZE(_ZSTR_STRUCT_SIZE(len)), persistent);
-			ZSTR_LEN(ret) = len;
+			ZSTR_SETLEN(ret, len);
 			zend_string_forget_hash_val(ret);
 			return ret;
 		} else {
@@ -244,7 +245,7 @@ static zend_always_inline zend_string *zend_string_safe_realloc(zend_string *s, 
 	if (!ZSTR_IS_INTERNED(s)) {
 		if (GC_REFCOUNT(s) == 1) {
 			ret = (zend_string *)safe_perealloc(s, n, m, ZEND_MM_ALIGNED_SIZE(_ZSTR_STRUCT_SIZE(l)), persistent);
-			ZSTR_LEN(ret) = (n * m) + l;
+			ZSTR_SETLEN(ret, (n * m) + l);
 			zend_string_forget_hash_val(ret);
 			return ret;
 		} else {

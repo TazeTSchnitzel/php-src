@@ -125,7 +125,7 @@ static void convert_browscap_pattern(zval *pattern, int persistent) /* {{{ */
 	t[j++] = '~';
 
 	t[j]=0;
-	ZSTR_LEN(res) = j;
+	ZSTR_SETLEN(res, j);
 	Z_STR_P(pattern) = res;
 	efree(lc_pattern);
 }

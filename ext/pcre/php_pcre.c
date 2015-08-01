@@ -1300,7 +1300,7 @@ PHPAPI zend_string *php_pcre_replace_impl(pcre_cache_entry *pce, zend_string *su
 				memcpy(ZSTR_VAL(result) + result_len, piece, subject_len - start_offset);
 				result_len += subject_len - start_offset;
 				ZSTR_VAL(result)[result_len] = '\0';
-				ZSTR_LEN(result) = result_len;
+				ZSTR_SETLEN(result, result_len);
 				break;
 			}
 		} else {

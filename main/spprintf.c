@@ -146,7 +146,7 @@
 	} else { \
 		smart_str_alloc(((smart_str *)(xbuf)), (count), 0); \
 		memset(ZSTR_VAL(((smart_str *)(xbuf))->s) + ZSTR_LEN(((smart_str *)(xbuf))->s), (ch), (count)); \
-		ZSTR_LEN(((smart_str *)(xbuf))->s) += (count); \
+		ZSTR_SETLEN((((smart_str *)(xbuf))->s), ZSTR_LEN(((smart_str *)(xbuf))->s) + (count)); \
 	} \
 } while (0);
 
@@ -885,7 +885,7 @@ PHPAPI zend_string *vstrpprintf(size_t max_len, const char *format, va_list ap) 
 	}
 
 	if (max_len && ZSTR_LEN(buf.s) > max_len) {
-		ZSTR_LEN(buf.s) = max_len;
+		ZSTR_SETLEN(buf.s, max_len);
 	}
 
 	smart_str_0(&buf);

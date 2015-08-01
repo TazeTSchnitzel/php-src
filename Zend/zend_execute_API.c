@@ -591,7 +591,7 @@ ZEND_API int zval_update_constant_ex(zval *p, zend_bool inline_change, zend_clas
 				if (actual[0] == '\\') {
 					if (inline_change) {
 						memmove(Z_STRVAL_P(p), Z_STRVAL_P(p)+1, Z_STRLEN_P(p));
-						--Z_STRLEN_P(p);
+						Z_STRSETLEN_P(p, Z_STRLEN_P(p) - 1);
 					} else {
 						++actual;
 					}

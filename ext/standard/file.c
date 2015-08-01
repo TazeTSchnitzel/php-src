@@ -1033,7 +1033,7 @@ PHPAPI PHP_FUNCTION(fgets)
 		if (line_len < len / 2) {
 			str = zend_string_truncate(str, line_len, 0);
 		} else {
-			ZSTR_LEN(str) = line_len;
+			ZSTR_SETLEN(str, line_len);
 		}
 		RETURN_NEW_STR(str);
 	}
@@ -1755,7 +1755,7 @@ PHPAPI PHP_FUNCTION(fread)
 	}
 
 	ZVAL_NEW_STR(return_value, zend_string_alloc(len, 0));
-	Z_STRLEN_P(return_value) = php_stream_read(stream, Z_STRVAL_P(return_value), len);
+	Z_STRSETLEN_P(return_value, php_stream_read(stream, Z_STRVAL_P(return_value), len));
 
 	/* needed because recv/read/gzread doesnt put a null at the end*/
 	Z_STRVAL_P(return_value)[Z_STRLEN_P(return_value)] = 0;

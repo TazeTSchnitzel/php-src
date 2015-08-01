@@ -128,7 +128,7 @@ static void string_init(string *str)
 	str->buf= zend_string_alloc(1024, 0);
 	str->alloced = 1024;
 	ZSTR_VAL(str->buf)[0] = '\0';
-	ZSTR_LEN(str->buf) = 0;
+	ZSTR_SETLEN(str->buf, 0);
 }
 
 static string *string_printf(string *str, const char *format, ...)
@@ -145,10 +145,10 @@ static string *string_printf(string *str, const char *format, ...)
 			size_t old_len = ZSTR_LEN(str->buf);
 			str->alloced = nlen;
 			str->buf = zend_string_extend(str->buf, str->alloced, 0);
-			ZSTR_LEN(str->buf) = old_len;
+			ZSTR_SETLEN(str->buf, old_len);
 		}
 		memcpy(ZSTR_VAL(str->buf) + ZSTR_LEN(str->buf), s_tmp, len + 1);
-		ZSTR_LEN(str->buf) += len;
+		ZSTR_SETLEN(str->buf, ZSTR_LEN(str->buf) + len);
 	}
 	efree(s_tmp);
 	va_end(arg);
@@ -162,10 +162,10 @@ static string *string_write(string *str, char *buf, size_t len)
 		size_t old_len = ZSTR_LEN(str->buf);
 		str->alloced = nlen;
 		str->buf = zend_string_extend(str->buf, str->alloced, 0);
-		ZSTR_LEN(str->buf) = old_len;
+		ZSTR_SETLEN(str->buf, old_len);
 	}
 	memcpy(ZSTR_VAL(str->buf) + ZSTR_LEN(str->buf), buf, len);
-	ZSTR_LEN(str->buf) += len;
+	ZSTR_SETLEN(str->buf, ZSTR_LEN(str->buf) + len);
 	ZSTR_VAL(str->buf)[ZSTR_LEN(str->buf)] = '\0';
 	return str;
 }

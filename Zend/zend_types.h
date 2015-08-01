@@ -512,6 +512,9 @@ static zend_always_inline zend_uchar zval_get_type(const zval* pz) {
 #define Z_STRLEN(zval)				ZSTR_LEN(Z_STR(zval))
 #define Z_STRLEN_P(zval_p)			Z_STRLEN(*(zval_p))
 
+#define Z_STRSETLEN(zval, len)		ZSTR_SETLEN(Z_STR(zval), len)
+#define Z_STRSETLEN_P(zval_p, len)	Z_STRSETLEN(*(zval_p), len)
+
 #define Z_STRHASH(zval)				ZSTR_HASH(Z_STR(zval))
 #define Z_STRHASH_P(zval_p)			Z_STRHASH(*(zval_p))
 

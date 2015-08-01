@@ -146,7 +146,7 @@ static char Lookahead(char *word, int how_far)
 							max_buffer_len += 2; \
 						} \
 						ZSTR_VAL(*phoned_word)[p_idx++] = c; \
-						ZSTR_LEN(*phoned_word) = p_idx; \
+						ZSTR_SETLEN(*phoned_word, p_idx); \
 					}
 /* Slap a null character on the end of the phoned word */
 #define End_Phoned_Word	{ \
@@ -155,7 +155,7 @@ static char Lookahead(char *word, int how_far)
 								max_buffer_len += 1; \
 							} \
 							ZSTR_VAL(*phoned_word)[p_idx] = '\0'; \
-							ZSTR_LEN(*phoned_word) = p_idx; \
+							ZSTR_SETLEN(*phoned_word, p_idx); \
 						}
 /* How long is the phoned word? */
 #define Phone_Len	(p_idx)
