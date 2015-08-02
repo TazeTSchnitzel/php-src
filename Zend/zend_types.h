@@ -75,21 +75,29 @@ typedef uintptr_t zend_uintptr_t;
 #define ZEND_EXT_TLS
 #endif
 
+/* For a 32-bit pointer you'd only have two characters, not very useful */
+#if SIZEOF_ZEND_LONG == 8
+#	define ZSTR_PACKED_ENABLED
+#endif
+
 typedef struct _zend_object_handlers zend_object_handlers;
 typedef struct _zend_class_entry     zend_class_entry;
 typedef union  _zend_function        zend_function;
 typedef struct _zend_execute_data    zend_execute_data;
 
-typedef struct _zval_struct     zval;
+typedef struct _zval_struct         zval;
 
-typedef struct _zend_refcounted zend_refcounted;
-typedef struct _zend_string     zend_string;
-typedef struct _zend_array      zend_array;
-typedef struct _zend_object     zend_object;
-typedef struct _zend_resource   zend_resource;
-typedef struct _zend_reference  zend_reference;
-typedef struct _zend_ast_ref    zend_ast_ref;
-typedef struct _zend_ast        zend_ast;
+typedef struct _zend_refcounted     zend_refcounted;
+typedef struct _zend_string         zend_string;
+#ifdef ZSTR_PACKED_ENABLED
+	typedef struct _zend_string_packed  zend_string_packed;
+#endif
+typedef struct _zend_array          zend_array;
+typedef struct _zend_object         zend_object;
+typedef struct _zend_resource       zend_resource;
+typedef struct _zend_reference      zend_reference;
+typedef struct _zend_ast_ref        zend_ast_ref;
+typedef struct _zend_ast            zend_ast;
 
 typedef int  (*compare_func_t)(const void *, const void *);
 typedef void (*swap_func_t)(void *, void *);
@@ -160,6 +168,19 @@ struct _zend_string {
 	size_t            len;
 	char              val[1];
 };
+
+#ifdef ZSTR_PACKED_ENABLED
+	/* On 64-bit systems, a zend_string with a length <= 6 can be optimised:
+	 * A tagged pointer can be used to store characters with no heap allocation.
+	 * This is the format of the "pointer". The odd bit is set to 1. */
+	struct _zend_string_packed {
+		ZEND_ENDIAN_LOHI(
+			/* bits: 4 : 3 : 1
+			 * padding, len, odd tag bit */ 
+			uint8_t lowbyte,
+			char val[7])
+	};
+#endif
 
 typedef struct _Bucket {
 	zval              val;
@@ -631,12 +652,17 @@ static zend_always_inline zend_uchar zval_get_type(const zval* pz) {
 		Z_TYPE_INFO_P(__z) = IS_INTERNED_STRING_EX;	\
 	} while (0)
 
-#define ZVAL_NEW_STR(z, s) do {					\
-		zval *__z = (z);						\
-		zend_string *__s = (s);					\
-		Z_STR_P(__z) = __s;						\
-		Z_TYPE_INFO_P(__z) = IS_STRING_EX;		\
-	} while (0)
+/* With string-packing enabled, not all new strings won't be interned */
+#ifdef ZSTR_PACKED_ENABLED
+#	define ZVAL_NEW_STR(z, s) ZVAL_STR(z, s)
+#else
+#	define ZVAL_NEW_STR(z, s) do {					\
+			zval *__z = (z);						\
+			zend_string *__s = (s);					\
+			Z_STR_P(__z) = __s;						\
+			Z_TYPE_INFO_P(__z) = IS_STRING_EX;		\
+		} while (0)
+#endif
 
 #define ZVAL_STR_COPY(z, s) do {						\
 		zval *__z = (z);								\

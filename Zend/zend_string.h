@@ -37,11 +37,31 @@ END_EXTERN_C()
 
 /* Shortcuts */
 
-#define ZSTR_VAL(zstr)  (zstr)->val
-#define ZSTR_LEN(zstr)  *(const size_t*)&((zstr)->len)
-#define ZSTR_SETLEN(zstr, newlen) (zstr)->len = (newlen)
-#define ZSTR_H(zstr)    *(const zend_ulong*)&((zstr)->h)
-#define ZSTR_SETH(zstr, newh) (zstr)->h = (newh)
+#ifdef ZSTR_PACKED_ENABLED
+#	define ZSTR_VAL(zstr)				(ZSTR_IS_PACKED(zstr) \
+		? ((zend_string_packed *)&zstr)->val \
+		: (zstr)->val)
+#	define ZSTR_LEN(zstr)				(ZSTR_IS_PACKED(zstr) \
+		? ((((zend_string_packed*)&(zstr))->lowbyte) >> 1) \
+		: (zstr)->len)
+#	define ZSTR_SETLEN(zstr, newlen)	(ZSTR_IS_PACKED(zstr) \
+		? (((zend_string_packed*)&(zstr))->lowbyte = ((newlen) << 1) | 1), (newlen) \
+		: ((zstr)->len = (newlen)))
+#	define ZSTR_H(zstr)    				(ZSTR_IS_PACKED(zstr) \
+		? 0 \
+		: *(const zend_ulong*)&((zstr)->h))
+#	define ZSTR_SETH(zstr, newh) 		(ZSTR_IS_PACKED(zstr) \
+		? (newh) \
+		: ((zstr)->h = (newh)))
+#else
+#	define ZSTR_VAL(zstr)				(zstr)->val
+										/* prevents use as lval */
+#	define ZSTR_LEN(zstr)				*(const size_t*)&((zstr)->len)
+#	define ZSTR_SETLEN(zstr, newlen)	(zstr)->len = (newlen)
+#	define ZSTR_H(zstr)    				*(const zend_ulong*)&((zstr)->h)
+#	define ZSTR_SETH(zstr, newh) 		((zstr)->h = (newh))
+#endif
+
 #define ZSTR_HASH(zstr) zend_string_hash_val(zstr)
 
 /* Compatibility macros */
@@ -55,9 +75,17 @@ END_EXTERN_C()
 
 /*---*/
 
-#define ZSTR_IS_INTERNED(s)					(GC_FLAGS(s) & IS_STR_INTERNED)
+#ifdef ZSTR_PACKED_ENABLED
+#	define ZSTR_IS_PACKED(ptr)		((*(uintptr_t*)&ptr) & 1)
+	/* last byte is always '\0', so we subtract 1 */
+#	define ZSTR_MAX_PACKED_LEN		(sizeof((*(zend_string_packed*)NULL).val) - 1)
+#else
+#	define ZSTR_IS_PACKED(_)		0
+#endif
 
-#define ZSTR_EMPTY_ALLOC()				CG(empty_string)
+#define ZSTR_IS_INTERNED(s)		(ZSTR_IS_PACKED(s) || (GC_FLAGS(s) & IS_STR_INTERNED))
+
+#define ZSTR_EMPTY_ALLOC()		CG(empty_string)
 
 #define _ZSTR_HEADER_SIZE XtOffsetOf(zend_string, val)
 
@@ -118,9 +146,31 @@ static zend_always_inline uint32_t zend_string_delref(zend_string *s)
 	return 1;
 }
 
+#ifdef ZSTR_PACKED_ENABLED
+	static zend_always_inline zend_string *zend_string_alloc_packed(size_t len)
+	{
+		zend_string_packed packed = { 0 };
+
+		ZEND_ASSERT(len <= ZSTR_MAX_PACKED_LEN);
+
+		/* lowest bit is 1 to tag the pointer */
+		packed.lowbyte = (len << 1) | 1;
+
+		return (zend_string*)*(uintptr_t*)&packed;
+	}
+#endif
+
 static zend_always_inline zend_string *zend_string_alloc(size_t len, int persistent)
 {
-	zend_string *ret = (zend_string *)pemalloc(ZEND_MM_ALIGNED_SIZE(_ZSTR_STRUCT_SIZE(len)), persistent);
+	zend_string *ret;
+
+#	ifdef ZSTR_PACKED_ENABLED
+		if (len <= ZSTR_MAX_PACKED_LEN) {
+			return zend_string_alloc_packed(len);
+		}
+#	endif
+
+	ret = (zend_string *)pemalloc(ZEND_MM_ALIGNED_SIZE(_ZSTR_STRUCT_SIZE(len)), persistent);
 
 	GC_REFCOUNT(ret) = 1;
 #if 1
