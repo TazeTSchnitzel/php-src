@@ -1082,16 +1082,18 @@ static void zend_add_trait_method(zend_class_entry *ce, const char *name, zend_s
 					if (existing_fn->common.fn_flags & ZEND_ACC_ABSTRACT) {
 						/* Make sure the trait method is compatible with previosly declared abstract method */
 						if (UNEXPECTED(!zend_traits_method_compatibility_check(fn, existing_fn))) {
+							zend_string *decl1 = zend_get_function_declaration(fn);
+							zend_string *decl2 = zend_get_function_declaration(existing_fn); 
 							zend_error_noreturn(E_COMPILE_ERROR, "Declaration of %s must be compatible with %s",
-								ZSTR_VAL(zend_get_function_declaration(fn)),
-								ZSTR_VAL(zend_get_function_declaration(existing_fn)));
+								ZSTR_VAL(decl1), ZSTR_VAL(decl2));
 						}
 					} else if (fn->common.fn_flags & ZEND_ACC_ABSTRACT) {
 						/* Make sure the abstract declaration is compatible with previous declaration */
 						if (UNEXPECTED(!zend_traits_method_compatibility_check(existing_fn, fn))) {
+							zend_string *decl1 = zend_get_function_declaration(fn);
+							zend_string *decl2 = zend_get_function_declaration(existing_fn); 
 							zend_error_noreturn(E_COMPILE_ERROR, "Declaration of %s must be compatible with %s",
-								ZSTR_VAL(zend_get_function_declaration(fn)),
-								ZSTR_VAL(zend_get_function_declaration(existing_fn)));
+								ZSTR_VAL(decl1), ZSTR_VAL(decl2));
 						}
 						return;
 					}
@@ -1106,16 +1108,18 @@ static void zend_add_trait_method(zend_class_entry *ce, const char *name, zend_s
 				(existing_fn->common.scope->ce_flags & ZEND_ACC_INTERFACE) == 0) {
 			/* Make sure the trait method is compatible with previosly declared abstract method */
 			if (UNEXPECTED(!zend_traits_method_compatibility_check(fn, existing_fn))) {
+				zend_string *decl1 = zend_get_function_declaration(fn);
+				zend_string *decl2 = zend_get_function_declaration(existing_fn);
 				zend_error_noreturn(E_COMPILE_ERROR, "Declaration of %s must be compatible with %s",
-					ZSTR_VAL(zend_get_function_declaration(fn)),
-					ZSTR_VAL(zend_get_function_declaration(existing_fn)));
+					ZSTR_VAL(decl1), ZSTR_VAL(decl2));
 			}
 		} else if (fn->common.fn_flags & ZEND_ACC_ABSTRACT) {
 			/* Make sure the abstract declaration is compatible with previous declaration */
 			if (UNEXPECTED(!zend_traits_method_compatibility_check(existing_fn, fn))) {
+				zend_string *decl1 = zend_get_function_declaration(fn);
+				zend_string *decl2 = zend_get_function_declaration(existing_fn);
 				zend_error_noreturn(E_COMPILE_ERROR, "Declaration of %s must be compatible with %s",
-					ZSTR_VAL(zend_get_function_declaration(fn)),
-					ZSTR_VAL(zend_get_function_declaration(existing_fn)));
+					ZSTR_VAL(decl1), ZSTR_VAL(decl2));
 			}
 			return;
 		} else if (UNEXPECTED(existing_fn->common.scope->ce_flags & ZEND_ACC_TRAIT)) {

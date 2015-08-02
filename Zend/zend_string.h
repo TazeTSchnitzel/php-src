@@ -275,20 +275,28 @@ static zend_always_inline void zend_string_release(zend_string *s)
 	}
 }
 
-
 static zend_always_inline zend_bool zend_string_equals(zend_string *s1, zend_string *s2)
 {
 	return s1 == s2 || (ZSTR_LEN(s1) == ZSTR_LEN(s2) && !memcmp(ZSTR_VAL(s1), ZSTR_VAL(s2), ZSTR_LEN(s1)));
 }
 
-#define zend_string_equals_ci(s1, s2) \
-	(ZSTR_LEN(s1) == ZSTR_LEN(s2) && !zend_binary_strcasecmp(ZSTR_VAL(s1), ZSTR_LEN(s1), ZSTR_VAL(s2), ZSTR_LEN(s2)))
+/* zend_operators.c */
+ZEND_API int ZEND_FASTCALL zend_binary_strcasecmp(const char *s1, size_t len1, const char *s2, size_t len2);
 
-#define zend_string_equals_literal_ci(str, c) \
-	(ZSTR_LEN(str) == sizeof(c) - 1 && !zend_binary_strcasecmp(ZSTR_VAL(str), ZSTR_LEN(str), (c), sizeof(c) - 1))
+static zend_always_inline zend_bool zend_string_equals_ci(zend_string *s1, zend_string *s2)
+{
+	return ZSTR_LEN(s1) == ZSTR_LEN(s2) && !zend_binary_strcasecmp(ZSTR_VAL(s1), ZSTR_LEN(s1), ZSTR_VAL(s2), ZSTR_LEN(s2));
+}
 
-#define zend_string_equals_literal(str, literal) \
-	(ZSTR_LEN(str) == sizeof(literal)-1 && !memcmp(ZSTR_VAL(str), literal, sizeof(literal) - 1))
+static zend_always_inline zend_bool zend_string_equals_literal_ci(zend_string *str, const char *c)
+{
+	return (ZSTR_LEN(str) == strlen(c) && !zend_binary_strcasecmp(ZSTR_VAL(str), ZSTR_LEN(str), c, strlen(c)));
+}
+
+static zend_always_inline zend_bool zend_string_equals_literal(zend_string *str, const char *literal)
+{
+	return (ZSTR_LEN(str) == sizeof(literal)-1 && !memcmp(ZSTR_VAL(str), literal, strlen(literal)));
+}
 
 /*
  * DJBX33A (Daniel J. Bernstein, Times 33 with Addition)

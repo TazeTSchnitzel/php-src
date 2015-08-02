@@ -2320,12 +2320,15 @@ ZEND_FUNCTION(debug_print_backtrace)
 
 		if (call->func) {
 			func = call->func;
-			function_name = (func->common.scope &&
-			                 func->common.scope->trait_aliases) ?
-				ZSTR_VAL(zend_resolve_method_name(
-					(object ? object->ce : func->common.scope), func)) :
-				(func->common.function_name ?
-					ZSTR_VAL(func->common.function_name) : NULL);
+			if (func->common.scope && func->common.scope->trait_aliases) {
+				zend_string *name = (zend_resolve_method_name((object ? object->ce : func->common.scope), func));
+				function_name = ZSTR_VAL(name);
+			} else if (func->common.function_name) {
+				zend_string *name = func->common.function_name;
+				function_name = ZSTR_VAL(name);
+			} else {
+				function_name = NULL;
+			}
 		} else {
 			func = NULL;
 			function_name = NULL;
@@ -2537,12 +2540,15 @@ ZEND_API void zend_fetch_debug_backtrace(zval *return_value, int skip_last, int 
 
 		if (call && call->func) {
 			func = call->func;
-			function_name = (func->common.scope &&
-			                 func->common.scope->trait_aliases) ?
-				ZSTR_VAL(zend_resolve_method_name(
-					(object ? object->ce : func->common.scope), func)) :
-				(func->common.function_name ?
-					ZSTR_VAL(func->common.function_name) : NULL);
+			if (func->common.scope && func->common.scope->trait_aliases) {
+				zend_string *name = (zend_resolve_method_name((object ? object->ce : func->common.scope), func));
+				function_name = ZSTR_VAL(name);
+			} else if (func->common.function_name) {
+				zend_string *name = func->common.function_name;
+				function_name = ZSTR_VAL(name);
+			} else {
+				function_name = NULL;
+			}
 		} else {
 			func = NULL;
 			function_name = NULL;
