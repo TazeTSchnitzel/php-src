@@ -47,8 +47,9 @@ END_EXTERN_C()
 #	define ZSTR_SETLEN(zstr, newlen)	(ZSTR_IS_PACKED(zstr) \
 		? (((zend_string_packed*)&(zstr))->lowbyte = ((newlen) << 1) | 1), (newlen) \
 		: ((zstr)->len = (newlen)))
+	/* for packed strings, the hash value is the packed string itself */
 #	define ZSTR_H(zstr)    				(ZSTR_IS_PACKED(zstr) \
-		? 0 \
+		? *(const zend_ulong*)&(zstr) \
 		: *(const zend_ulong*)&((zstr)->h))
 #	define ZSTR_SETH(zstr, newh) 		(ZSTR_IS_PACKED(zstr) \
 		? (newh) \
@@ -165,7 +166,7 @@ static zend_always_inline zend_string *zend_string_alloc(size_t len, int persist
 	zend_string *ret;
 
 #	ifdef ZSTR_PACKED_ENABLED
-		if (len <= ZSTR_MAX_PACKED_LEN) {
+		if (UNEXPECTED(len <= ZSTR_MAX_PACKED_LEN)) {
 			return zend_string_alloc_packed(len);
 		}
 #	endif

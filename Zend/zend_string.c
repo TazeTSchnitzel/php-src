@@ -31,6 +31,14 @@ static void zend_interned_strings_restore_int(void);
 
 ZEND_API zend_ulong zend_hash_func(const char *str, size_t len)
 {
+#	ifdef ZSTR_PACKED_ENABLED
+		/* for small strings, the hash value is the packed string */
+		if (UNEXPECTED(len <= ZSTR_MAX_PACKED_LEN)) {
+			zend_string *packed = zend_string_alloc_packed(len);
+			memcpy(ZSTR_VAL(packed), str, len);
+			return *(const zend_ulong*)&packed;
+		}
+#	endif
 	return zend_inline_hash_func(str, len);
 }
 
