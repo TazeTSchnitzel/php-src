@@ -38,20 +38,20 @@ END_EXTERN_C()
 /* Shortcuts */
 
 #ifdef ZSTR_PACKED_ENABLED
-#	define ZSTR_VAL(zstr)				(ZSTR_IS_PACKED(zstr) \
+#	define ZSTR_VAL(zstr)				(EXPECTED(ZSTR_IS_PACKED(zstr)) \
 		? ((zend_string_packed *)&zstr)->val \
 		: (zstr)->val)
-#	define ZSTR_LEN(zstr)				(ZSTR_IS_PACKED(zstr) \
+#	define ZSTR_LEN(zstr)				(EXPECTED(ZSTR_IS_PACKED(zstr)) \
 		? ((((zend_string_packed*)&(zstr))->lowbyte) >> 1) \
 		: (zstr)->len)
-#	define ZSTR_SETLEN(zstr, newlen)	(ZSTR_IS_PACKED(zstr) \
+#	define ZSTR_SETLEN(zstr, newlen)	(EXPECTED(ZSTR_IS_PACKED(zstr)) \
 		? (((zend_string_packed*)&(zstr))->lowbyte = ((newlen) << 1) | 1), (newlen) \
 		: ((zstr)->len = (newlen)))
-	/* for packed strings, the hash value is the packed string itself */
-#	define ZSTR_H(zstr)    				(ZSTR_IS_PACKED(zstr) \
+	/* for small strings, the hash value is the packed string */
+#	define ZSTR_H(zstr)    				(EXPECTED(ZSTR_IS_PACKED(zstr)) \
 		? *(const zend_ulong*)&(zstr) \
 		: *(const zend_ulong*)&((zstr)->h))
-#	define ZSTR_SETH(zstr, newh) 		(ZSTR_IS_PACKED(zstr) \
+#	define ZSTR_SETH(zstr, newh) 		(EXPECTED(ZSTR_IS_PACKED(zstr)) \
 		? (newh) \
 		: ((zstr)->h = (newh)))
 #else
@@ -277,6 +277,14 @@ static zend_always_inline zend_string *zend_string_truncate(zend_string *s, size
 	ZEND_ASSERT(len <= ZSTR_LEN(s));
 	if (!ZSTR_IS_INTERNED(s)) {
 		if (EXPECTED(GC_REFCOUNT(s) == 1)) {
+#			ifdef ZSTR_PACKED_ENABLED
+				if (UNEXPECTED(len <= ZSTR_MAX_PACKED_LEN)) {
+					ret = zend_string_alloc(len, persistent);
+					memcpy(ZSTR_VAL(ret), ZSTR_VAL(s), len + 1);
+					pefree(s, GC_FLAGS(s) & IS_STR_PERSISTENT);
+					return ret;
+				}
+#			endif
 			ret = (zend_string *)perealloc(s, ZEND_MM_ALIGNED_SIZE(_ZSTR_STRUCT_SIZE(len)), persistent);
 			ZSTR_SETLEN(ret, len);
 			zend_string_forget_hash_val(ret);
