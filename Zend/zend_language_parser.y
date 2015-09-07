@@ -52,7 +52,6 @@ static YYSIZE_T zend_yytnamerr(char*, const char*);
 %destructor { zend_ast_destroy($$); } <ast>
 %destructor { if ($$) zend_string_release($$); } <str>
 
-%right T_TILDED_ARROW
 %left T_INCLUDE T_INCLUDE_ONCE T_EVAL T_REQUIRE T_REQUIRE_ONCE
 %left ','
 %left T_LOGICAL_OR
@@ -616,7 +615,7 @@ alt_if_stmt:
 ;
 
 short_closure_expr:
-		expr %prec T_TILDED_ARROW { $$ = zend_ast_create(ZEND_AST_RETURN, $1); }
+		expr %prec T_INC { $$ = zend_ast_create(ZEND_AST_RETURN, $1); }
 	|	'{' inner_statement_list '}' { $$ = $2; }
 
 variable_parameter_list:
@@ -999,37 +998,37 @@ expr_without_variable:
 			{ $$ = zend_ast_create_decl(ZEND_AST_CLOSURE, $3 | ZEND_ACC_STATIC, $2, $9,
 			      zend_string_init("{closure}", sizeof("{closure}") - 1, 0),
 			      $5, $7, $11, $8); }
-	|	T_VARIABLE T_TILDED_ARROW short_closure_expr
+	|	'^' T_VARIABLE short_closure_expr %prec T_INC
 			{ $$ = zend_ast_create_decl(ZEND_AST_CLOSURE, 0, CG(zend_lineno), NULL,
 				  zend_string_init("{closure}", sizeof("{closure}") - 1, 0),
-			      zend_ast_create_list(1, ZEND_AST_PARAM_LIST, zend_ast_create_ex(ZEND_AST_PARAM, 0, NULL, $1, NULL)), zend_ast_create_list(0, ZEND_AST_CLOSURE_USES), $3, NULL); }
+			      zend_ast_create_list(1, ZEND_AST_PARAM_LIST, zend_ast_create_ex(ZEND_AST_PARAM, 0, NULL, $2, NULL)), zend_ast_create_list(0, ZEND_AST_CLOSURE_USES), $3, NULL); }
 /* hack with expr is needed due to reduction when having e.g. ($var) ~> ...; parser can't decide whether to apply '(' expr ')' { $$ = $2; } with expr being T_VARIABLE or '(' T_VARIABLE ')' T_TILDED_ARROW ... because it doesn't lookahead here */
-	|	'(' expr ')' T_TILDED_ARROW short_closure_expr
-			{ if (!zend_is_simple_variable($2)) { zenderror("Cannot use an expression as parameter"); zend_ast_destroy($2); zend_ast_destroy($5); YYERROR; }
+	|	'^' '(' expr ')' short_closure_expr %prec T_INC
+			{ if (!zend_is_simple_variable($3)) { zenderror("Cannot use an expression as parameter"); zend_ast_destroy($3); zend_ast_destroy($5); YYERROR; }
 			  $$ = zend_ast_create_decl(ZEND_AST_CLOSURE, 0, CG(zend_lineno), NULL,
 				  zend_string_init("{closure}", sizeof("{closure}") - 1, 0),
-			      zend_ast_create_list(1, ZEND_AST_PARAM_LIST, zend_ast_create_ex(ZEND_AST_PARAM, 0, NULL, $2->child[0], NULL)), zend_ast_create_list(0, ZEND_AST_CLOSURE_USES), $5, NULL); }
-	|	'&' '(' expr ')' T_TILDED_ARROW short_closure_expr
-			{ if (!zend_is_simple_variable($3)) { zenderror("Cannot use an expression as parameter"); zend_ast_destroy($3); zend_ast_destroy($6); YYERROR; }
+			      zend_ast_create_list(1, ZEND_AST_PARAM_LIST, zend_ast_create_ex(ZEND_AST_PARAM, 0, NULL, $3->child[0], NULL)), zend_ast_create_list(0, ZEND_AST_CLOSURE_USES), $5, NULL); }
+	|	'&' '^' '(' expr ')' short_closure_expr %prec T_INC
+			{ if (!zend_is_simple_variable($4)) { zenderror("Cannot use an expression as parameter"); zend_ast_destroy($4); zend_ast_destroy($6); YYERROR; }
 			  $$ = zend_ast_create_decl(ZEND_AST_CLOSURE, ZEND_ACC_RETURN_REFERENCE, CG(zend_lineno), NULL,
 				  zend_string_init("{closure}", sizeof("{closure}") - 1, 0),
-			      zend_ast_create_list(1, ZEND_AST_PARAM_LIST, zend_ast_create_ex(ZEND_AST_PARAM, 0, NULL, $3->child[0], NULL)), zend_ast_create_list(0, ZEND_AST_CLOSURE_USES), $6, NULL); }
-	|	'(' complex_variable_parameter ')' T_TILDED_ARROW short_closure_expr
+			      zend_ast_create_list(1, ZEND_AST_PARAM_LIST, zend_ast_create_ex(ZEND_AST_PARAM, 0, NULL, $4->child[0], NULL)), zend_ast_create_list(0, ZEND_AST_CLOSURE_USES), $6, NULL); }
+	|	'^' '(' complex_variable_parameter ')' short_closure_expr %prec T_INC
 			{ $$ = zend_ast_create_decl(ZEND_AST_CLOSURE, 0, CG(zend_lineno), NULL,
 				  zend_string_init("{closure}", sizeof("{closure}") - 1, 0),
-			      zend_ast_create_list(1, ZEND_AST_PARAM_LIST, $2), zend_ast_create_list(0, ZEND_AST_CLOSURE_USES), $5, NULL); }
-	|	'&' '(' complex_variable_parameter ')' T_TILDED_ARROW short_closure_expr
+			      zend_ast_create_list(1, ZEND_AST_PARAM_LIST, $3), zend_ast_create_list(0, ZEND_AST_CLOSURE_USES), $5, NULL); }
+	|	'&' '^' '(' complex_variable_parameter ')' short_closure_expr %prec T_INC
 			{ $$ = zend_ast_create_decl(ZEND_AST_CLOSURE, ZEND_ACC_RETURN_REFERENCE, CG(zend_lineno), NULL,
 				  zend_string_init("{closure}", sizeof("{closure}") - 1, 0),
-			      zend_ast_create_list(1, ZEND_AST_PARAM_LIST, $3), zend_ast_create_list(0, ZEND_AST_CLOSURE_USES), $6, NULL); }
-	|	'(' variable_parameter_list ')' T_TILDED_ARROW short_closure_expr
+			      zend_ast_create_list(1, ZEND_AST_PARAM_LIST, $4), zend_ast_create_list(0, ZEND_AST_CLOSURE_USES), $6, NULL); }
+	|	'^' '(' variable_parameter_list ')' short_closure_expr %prec T_INC
 			{ $$ = zend_ast_create_decl(ZEND_AST_CLOSURE, 0, CG(zend_lineno), NULL,
 				  zend_string_init("{closure}", sizeof("{closure}") - 1, 0),
-			      $2, zend_ast_create_list(0, ZEND_AST_CLOSURE_USES), $5, NULL); }
-	|	'&' '(' variable_parameter_list ')' T_TILDED_ARROW short_closure_expr
+			      $3, zend_ast_create_list(0, ZEND_AST_CLOSURE_USES), $5, NULL); }
+	|	'&' '^' '(' variable_parameter_list ')' short_closure_expr %prec T_INC
 			{ $$ = zend_ast_create_decl(ZEND_AST_CLOSURE, ZEND_ACC_RETURN_REFERENCE, CG(zend_lineno), NULL,
 				  zend_string_init("{closure}", sizeof("{closure}") - 1, 0),
-			      $3, zend_ast_create_list(0, ZEND_AST_CLOSURE_USES), $6, NULL); }
+			      $4, zend_ast_create_list(0, ZEND_AST_CLOSURE_USES), $6, NULL); }
 ;
 
 
