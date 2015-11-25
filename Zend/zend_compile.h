@@ -874,6 +874,8 @@ ZEND_API void zend_assert_valid_class_name(const zend_string *const_name);
 #define ZEND_ISSET_ISEMPTY_MASK	    (ZEND_ISSET | ZEND_ISEMPTY)
 #define ZEND_QUICK_SET			    0x00800000
 
+#define ZEND_KNOWN_NON_NUMERIC	    0x00400000
+
 #define ZEND_FETCH_ARG_MASK         0x000fffff
 
 #define ZEND_FREE_ON_RETURN     (1<<0)

@@ -2272,6 +2272,10 @@ static zend_op *zend_delayed_compile_dim(znode *result, zend_ast *ast, uint32_t 
 	zend_delayed_compile_var(&var_node, var_ast, type);
 	zend_separate_if_call_and_write(&var_node, var_ast, type);
 
+	zend_op *op;
+
+	zend_bool known_non_numeric = 0;
+
 	if (dim_ast == NULL) {
 		if (type == BP_VAR_R || type == BP_VAR_IS) {
 			zend_error_noreturn(E_COMPILE_ERROR, "Cannot use [] for reading");
@@ -2282,9 +2286,22 @@ static zend_op *zend_delayed_compile_dim(znode *result, zend_ast *ast, uint32_t 
 		dim_node.op_type = IS_UNUSED;
 	} else {
 		zend_compile_expr(&dim_node, dim_ast);
+		if (dim_node.op_type == IS_CONST && Z_TYPE(dim_node.u.constant) == IS_STRING) {
+			zend_ulong index; /* unused */
+
+			if (!ZEND_HANDLE_NUMERIC(Z_STR(dim_node.u.constant), index)) {
+				known_non_numeric = 1;
+			}
+		}
 	}
 
-	return zend_delayed_emit_op(result, ZEND_FETCH_DIM_R, &var_node, &dim_node);
+	op = zend_delayed_emit_op(result, ZEND_FETCH_DIM_R, &var_node, &dim_node);
+
+	if (known_non_numeric) {
+		op->extended_value |= ZEND_KNOWN_NON_NUMERIC;
+	}
+
+	return op;
 }
 /* }}} */
 
