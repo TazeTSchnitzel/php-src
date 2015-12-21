@@ -14,7 +14,7 @@ $b = 'c';
 $c = 'strtoupper';
 $strtoupper = 'strtolower';
 
-var_dump(${${++$a}}('FOO') == 'foo');
+var_dump(${${$a = "c"}}('FOO') == 'foo');
 
 ?>
 --EXPECT--

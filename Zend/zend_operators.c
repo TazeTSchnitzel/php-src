@@ -2148,6 +2148,7 @@ static void ZEND_FASTCALL increment_string(zval *str) /* {{{ */
 	zend_string *t;
 	int last=0; /* Shut up the compiler warning */
 	int ch;
+	static zend_bool deprecation_warning_shown = 0;
 
 	if (Z_STRLEN_P(str) == 0) {
 		zend_string_release(Z_STR_P(str));
@@ -2170,6 +2171,12 @@ static void ZEND_FASTCALL increment_string(zval *str) /* {{{ */
 		zend_string_forget_hash_val(Z_STR_P(str));
 	}
 	s = Z_STRVAL_P(str);
+	ch = s[pos];
+
+	if (!deprecation_warning_shown && ((ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z'))) {
+		zend_error(E_DEPRECATED, "String letter increment is deprecated and will be removed in a future version of PHP. This warning will not appear again during this request.");
+		deprecation_warning_shown = 1;
+	}
 
 	do {
 		ch = s[pos];

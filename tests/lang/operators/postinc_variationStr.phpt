@@ -17,7 +17,7 @@ foreach ($strVals as $strVal) {
    
 ?>
 ===DONE===
---EXPECT--
+--EXPECTF--
 --- testing: '0' ---
 int(1)
 --- testing: '65' ---
@@ -29,6 +29,8 @@ float(2.2)
 --- testing: '-7.7' ---
 float(-6.7)
 --- testing: 'abc' ---
+
+Deprecated: String letter increment is deprecated and will be removed in a future version of PHP. This warning will not appear again during this request. in %s on line %d
 string(3) "abd"
 --- testing: '123abc' ---
 string(6) "123abd"

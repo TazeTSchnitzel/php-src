@@ -2,29 +2,30 @@
 Bug #48286 (ReflectionProperty::getDeclaringClass() does not work with redeclared properties)
 --FILE--
 <?php
-class A {
+class C1 {
 }
 
-class B extends A {
+class C2 extends C1 {
   static protected $prop;
 }
 
-class C extends B {
+class C3 extends C2 {
   static protected $prop;
 }
 
-class D extends C {
+class C4 extends C3 {
 }
 
-class E extends D {
+class C5 extends C4 {
 }
 
-class F extends E {
+class C6 extends C5 {
   static protected $prop;
 }
 
-$class = 'A';
-for($class = 'A'; $class <= 'F'; $class ++) {
+$classNo = 1;
+for($classNo = 1; $classNo <= 6; $classNo++) {
+  $class = 'C' . $classNo;
   print($class.' => ');
   try {
     $rp = new ReflectionProperty($class, 'prop');
@@ -36,9 +37,9 @@ for($class = 'A'; $class <= 'F'; $class ++) {
 }
 ?>
 --EXPECT--
-A => N/A
-B => B
-C => C
-D => C
-E => C
-F => F
+C1 => N/A
+C2 => C2
+C3 => C3
+C4 => C3
+C5 => C3
+C6 => C6
