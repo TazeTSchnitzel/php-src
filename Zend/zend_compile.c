@@ -6495,7 +6495,12 @@ void zend_compile_coalesce(znode *result, zend_ast *ast) /* {{{ */
 	opnum = get_next_op_number(CG(active_op_array));
 	zend_emit_op_tmp(result, ZEND_COALESCE, &expr_node, NULL);
 
-	zend_compile_expr(&default_node, default_ast);
+	if (!default_ast) {
+		default_node.op_type = IS_CONST;
+		ZVAL_NULL(&default_node.u.constant);
+	} else {
+		zend_compile_expr(&default_node, default_ast);
+	}
 
 	opline = zend_emit_op_tmp(NULL, ZEND_QM_ASSIGN, &default_node, NULL);
 	SET_NODE(opline->result, result);
