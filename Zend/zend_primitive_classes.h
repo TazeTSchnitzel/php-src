@@ -12,32 +12,31 @@
    | obtain it through the world-wide-web, please send a note to          |
    | license@zend.com so we can mail you a copy immediately.              |
    +----------------------------------------------------------------------+
-   | Authors: Sterling Hughes <sterling@php.net>                          |
-   |          Marcus Boerger <helly@php.net>                              |
+   | Author: Andrea Faulds <ajf@ajf.me>                                   |
    +----------------------------------------------------------------------+
 */
 
 /* $Id$ */
 
-#include "zend.h"
-#include "zend_API.h"
-#include "zend_builtin_functions.h"
-#include "zend_interfaces.h"
-#include "zend_exceptions.h"
-#include "zend_closures.h"
-#include "zend_generators.h"
-#include "zend_primitive_classes.h"
+#ifndef ZEND_PRIMITIVE_CLASSES_H
+#define ZEND_PRIMITIVE_CLASSES_H
 
+BEGIN_EXTERN_C()
 
-ZEND_API void zend_register_default_classes(void)
-{
-	zend_register_interfaces();
-	zend_register_default_exception();
-	zend_register_iterator_wrapper();
-	zend_register_closure_ce();
-	zend_register_generator_ce();
-	zend_register_primitives_ce();
-}
+void zend_register_primitives_ce(void);
+
+extern ZEND_API zend_class_entry *zend_ce_null;
+extern ZEND_API zend_class_entry *zend_ce_bool;
+extern ZEND_API zend_class_entry *zend_ce_int;
+extern ZEND_API zend_class_entry *zend_ce_float;
+extern ZEND_API zend_class_entry *zend_ce_string;
+extern ZEND_API zend_class_entry *zend_ce_array;
+extern ZEND_API zend_class_entry *zend_ce_object;
+extern ZEND_API zend_class_entry *zend_ce_resource;
+
+END_EXTERN_C()
+
+#endif
 
 /*
  * Local variables:
