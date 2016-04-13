@@ -25,14 +25,7 @@ BEGIN_EXTERN_C()
 
 void zend_register_primitives_ce(void);
 
-extern ZEND_API zend_class_entry *zend_ce_null;
-extern ZEND_API zend_class_entry *zend_ce_bool;
-extern ZEND_API zend_class_entry *zend_ce_int;
-extern ZEND_API zend_class_entry *zend_ce_float;
-extern ZEND_API zend_class_entry *zend_ce_string;
-extern ZEND_API zend_class_entry *zend_ce_array;
-extern ZEND_API zend_class_entry *zend_ce_object;
-extern ZEND_API zend_class_entry *zend_ce_resource;
+extern ZEND_API zend_class_entry *zend_ce_primitives[_IS_BOOL + 1];
 
 END_EXTERN_C()
 

@@ -28,15 +28,7 @@
 #include "zend_globals.h"
 
 /* non-static since it needs to be referenced */
-ZEND_API zend_class_entry *zend_ce_null;
-ZEND_API zend_class_entry *zend_ce_bool;
-ZEND_API zend_class_entry *zend_ce_int;
-ZEND_API zend_class_entry *zend_ce_float;
-ZEND_API zend_class_entry *zend_ce_string;
-ZEND_API zend_class_entry *zend_ce_array;
-/* TODO: StdClass merger */
-ZEND_API zend_class_entry *zend_ce_object;
-ZEND_API zend_class_entry *zend_ce_resource;
+ZEND_API zend_class_entry *zend_ce_primitives[_IS_BOOL + 1] = {0};
 
 ZEND_COLD ZEND_METHOD(PrimitiveType, __construct) /* {{{ */
 {
@@ -49,25 +41,25 @@ static const zend_function_entry primitive_functions[] = {
 	ZEND_FE_END
 };
 
-#define REGISTER_PRIMITIVE_CE(name) 					\
-{														\
-	zend_class_entry ce;								\
-														\
-	INIT_CLASS_ENTRY(ce, #name, primitive_functions);	\
-	zend_ce_##name = zend_register_internal_class(&ce);	\
-	zend_ce_##name->ce_flags |= ZEND_ACC_FINAL; 		\
+#define REGISTER_PRIMITIVE_CE(name, type) 							\
+{																	\
+	zend_class_entry ce;											\
+																	\
+	INIT_CLASS_ENTRY(ce, #name, primitive_functions);				\
+	zend_ce_primitives[type] = zend_register_internal_class(&ce);	\
+	zend_ce_primitives[type]->ce_flags |= ZEND_ACC_FINAL; 			\
 }
 
 void zend_register_primitives_ce(void) /* {{{ */
 {
-	REGISTER_PRIMITIVE_CE(null);
-	REGISTER_PRIMITIVE_CE(bool);
-	REGISTER_PRIMITIVE_CE(int);
-	REGISTER_PRIMITIVE_CE(float);
-	REGISTER_PRIMITIVE_CE(string);
-	REGISTER_PRIMITIVE_CE(array);
-	REGISTER_PRIMITIVE_CE(object);
-	REGISTER_PRIMITIVE_CE(resource);
+	REGISTER_PRIMITIVE_CE(null, IS_NULL);
+	REGISTER_PRIMITIVE_CE(bool, _IS_BOOL);
+	REGISTER_PRIMITIVE_CE(int, IS_LONG);
+	REGISTER_PRIMITIVE_CE(float, IS_DOUBLE);
+	REGISTER_PRIMITIVE_CE(string, IS_STRING);
+	REGISTER_PRIMITIVE_CE(array, IS_ARRAY);
+	REGISTER_PRIMITIVE_CE(object, IS_OBJECT);
+	REGISTER_PRIMITIVE_CE(resource, IS_RESOURCE);
 }
 /* }}} */
 
