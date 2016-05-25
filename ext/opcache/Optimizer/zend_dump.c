@@ -470,9 +470,6 @@ static void zend_dump_op(const zend_op_array *op_array, const zend_basic_block *
 			case IS_CALLABLE:
 				fprintf(stderr, " (callable)");
 				break;
-			case IS_VOID:
-				fprintf(stderr, " (void)");
-				break;
 			default:
 				fprintf(stderr, " (\?\?\?)");
 				break;

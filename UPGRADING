@@ -20,8 +20,6 @@ PHP 7.1 UPGRADE NOTES
 ========================================
 
 - Core:
-  . 'void' can no longer be used as the name of a class, interface, or trait.
-    This applies to declarations, class_alias() and use statements.
   . (int), intval() where $base is 10 or unspecified, settype(), decbin(),
     decoct(), dechex(), integer operators and other conversions now always
     respect scientific notation in numeric strings.
@@ -49,8 +47,8 @@ PHP 7.1 UPGRADE NOTES
 2. New Features
 ========================================
 - Core
-  . Added void return type, which requires that a function not return a value.
-    (RFC: https://wiki.php.net/rfc/void_return_type)
+  . Added null as a type for parameter and return type declarations.
+    (RFC: https://wiki.php.net/rfc/null_return_type)
   . String offset access now supports negative references, which will be
     counted from the end of the string.
     (RFC: https://wiki.php.net/rfc/negative-string-offsets)

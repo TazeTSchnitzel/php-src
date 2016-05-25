@@ -2371,7 +2371,7 @@ static uint32_t zend_fetch_arg_info(const zend_script *script, zend_arg_info *ar
 		*pce = get_class_entry(script, lcname);
 		zend_string_release(lcname);
 	} else if (arg_info->type_hint != IS_UNDEF) {
-		if (arg_info->type_hint == IS_VOID) {
+		if (arg_info->type_hint == IS_NULL) {
 			tmp |= MAY_BE_NULL;
 		} else if (arg_info->type_hint == IS_CALLABLE) {
 			tmp |= MAY_BE_STRING|MAY_BE_OBJECT|MAY_BE_ARRAY|MAY_BE_ARRAY_KEY_ANY|MAY_BE_ARRAY_OF_ANY|MAY_BE_ARRAY_OF_REF;

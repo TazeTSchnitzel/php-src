@@ -22,7 +22,7 @@ PHP                                                                        NEWS
   . Fixed bug #72213 (Finally leaks on nested exceptions). (Dmitry, Nikita)
   . Implemented the RFC `Support Class Constant Visibility`. (Sean DuBois,
     Reeze Xia, Dmitry)
-  . Added void return type. (Andrea)
+  . Added null type for parameter and return type declarations. (Andrea)
   . Added support for negative string offsets in string offset syntax and
     various string functions. (Francois)
   . Added a form of the list() construct where keys can be specified. (Andrea)

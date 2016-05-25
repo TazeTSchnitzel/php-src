@@ -159,7 +159,6 @@ static const struct reserved_class_name reserved_class_names[] = {
 	{ZEND_STRL("static")},
 	{ZEND_STRL("string")},
 	{ZEND_STRL("true")},
-	{ZEND_STRL("void")},
 	{NULL, 0}
 };
 
@@ -203,7 +202,7 @@ static const builtin_type_info builtin_types[] = {
 	{ZEND_STRL("float"), IS_DOUBLE},
 	{ZEND_STRL("string"), IS_STRING},
 	{ZEND_STRL("bool"), _IS_BOOL},
-	{ZEND_STRL("void"), IS_VOID},
+	{ZEND_STRL("null"), IS_NULL},
 	{NULL, 0, IS_UNDEF}
 };
 
@@ -2266,15 +2265,6 @@ static zend_op *zend_delayed_compile_end(uint32_t offset) /* {{{ */
 
 static void zend_emit_return_type_check(znode *expr, zend_arg_info *return_info) /* {{{ */
 {
-	/* `return ...;` is illegal in a void function (but `return;` isn't) */
-	if (return_info->type_hint == IS_VOID) {
-		if (expr) {
-			zend_error_noreturn(E_COMPILE_ERROR, "A void function must not return a value");
-		}
-		/* we don't need run-time check */
-		return;
-	}
-
 	if (return_info->type_hint != IS_UNDEF) {
 		zend_op *opline;
 
@@ -4953,6 +4943,10 @@ void zend_compile_params(zend_ast *ast, zend_ast *return_type_ast) /* {{{ */
 
 		zend_compile_typename(return_type_ast, arg_infos);
 
+		if (arg_infos->type_hint == IS_NULL) {
+			arg_infos->allow_null = 1;
+		}
+
 		arg_infos++;
 		op_array->fn_flags |= ZEND_ACC_HAS_RETURN_TYPE;
 	} else {
@@ -5046,8 +5040,8 @@ void zend_compile_params(zend_ast *ast, zend_ast *return_type_ast) /* {{{ */
 
 			zend_compile_typename(type_ast, arg_info);
 
-			if (arg_info->type_hint == IS_VOID) {
-				zend_error_noreturn(E_COMPILE_ERROR, "void cannot be used as a parameter type");
+			if (arg_info->type_hint == IS_NULL) {
+				arg_info->allow_null = 1;
 			}
 
 			if (type_ast->kind == ZEND_AST_TYPE) {
