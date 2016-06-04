@@ -814,116 +814,64 @@ static zend_bool zend_verify_multi_type(zend_multi_type *m, zend_bool allow_null
 		return 0;
 	}
 
-/* Weak rule table for unions (must be superset of strict); if strict rules fail... :
- *
- * If object passed, cast to (if allowed) string
- * If non-scalar passed, fail
- * If boolean passed, cast to (if allowed, in that order) long, double, string
- * If long passed, cast to (if allowed, in that order) string, boolean
- * If double passed, cast to (if allowed, in that order) long if exact match or string not allowed, string, boolean
- * If string passed and numeric cast possible, cast to long or double
- * If possible to cast to boolean
- * Else fail in weak mode (i.e. only true or false possible, but not boolean in general or non-numeric string for int|float)
+/* Weak rules for unions (must be superset of strict); if strict rules fail...
+ * Uses the algorithm presented by Popov (2016)
  */
 	if (EXPECTED(((1 << arg_type) & SCALAR_TYPEMASK) && (allowed_types & SCALAR_TYPEMASK))) {
+		const zend_uchar target_types[] = {
+			_IS_BOOL, IS_LONG, IS_DOUBLE, IS_STRING
+		};
+		zend_uchar target_type;
+		
+reselect:
+		target_type = target_types[rand() % 4];
 
-		/* If there's no other scalar type than true or false */
-		if (UNEXPECTED((allowed_types & (SCALAR_TYPEMASK & ~(MAY_BE_FALSE|MAY_BE_TRUE))) == 0)) {
-			zend_bool truth = zend_is_true(arg);
-			if (UNEXPECTED(truth != ((allowed_types & MAY_BE_TRUE) != 0))) {
-				return 0;
-			}
-
-			zval_dtor(arg);
-			ZVAL_BOOL(arg, truth);
-			return 1;
+		if (!((1 << target_type) & allowed_types)) {
+			goto reselect;
 		}
 
-		switch (arg_type) {
-			case IS_TRUE:
-			case IS_FALSE:
-				if (allowed_types & MAY_BE_LONG) {
-					ZVAL_LONG(arg, arg_type == IS_TRUE);
-				} else if (allowed_types & MAY_BE_DOUBLE) {
-					ZVAL_DOUBLE(arg, (double) (arg_type == IS_TRUE));
-				} else if (arg_type == IS_FALSE) {
-					ZEND_ASSERT((allowed_types & SCALAR_TYPEMASK) == MAY_BE_STRING);
-					ZVAL_EMPTY_STRING(arg);
-				} else {
-					ZEND_ASSERT((allowed_types & SCALAR_TYPEMASK) == MAY_BE_STRING);
-					if (CG(one_char_string)['1']) {
-						ZVAL_INTERNED_STR(arg, CG(one_char_string)['1']);
-					} else {
-						ZVAL_STRINGL(arg, "1", 1);
-					}
-				}
-				return 1;
-
-			case IS_LONG:
-				if (allowed_types & MAY_BE_STRING) {
-					ZVAL_NEW_STR(arg, zend_long_to_str(Z_LVAL_P(arg)));
-				} else {
-					/* long->double is handled at start to have identical behavior between strict and non-strict */
-					ZEND_ASSERT(allowed_types & MAY_BE_BOOL);
-					ZVAL_BOOL(arg, Z_LVAL_P(arg) != 0);
-				}
-				return 1;
-
-			case IS_DOUBLE:
-				if ((allowed_types & (MAY_BE_LONG|MAY_BE_STRING)) == (MAY_BE_LONG|MAY_BE_STRING) && Z_DVAL_P(arg) == (double)(zend_long)Z_DVAL_P(arg)) {
-					ZVAL_LONG(arg, (zend_long) Z_DVAL_P(arg));
-				} else if (allowed_types & MAY_BE_STRING) {
-					ZVAL_NEW_STR(arg, zend_strpprintf(0, "%.*G", (int) EG(precision), Z_DVAL_P(arg)));
-				} else if (allowed_types & MAY_BE_LONG) {
-					ZVAL_LONG(arg, zend_dval_to_lval_cap(Z_DVAL_P(arg)));
-				} else {
-					ZEND_ASSERT(allowed_types & MAY_BE_BOOL);
-					ZVAL_BOOL(arg, !!Z_DVAL_P(arg));
-				}
-				return 1;
-
-			case IS_STRING:
-				if (allowed_types & (MAY_BE_DOUBLE|MAY_BE_LONG)) {
-					zend_uchar type;
-					zend_long lval;
-					double dval;
-					/* do not emit notices when we can still cast to true */
-					if (0 == (type = is_numeric_string(Z_STRVAL_P(arg), Z_STRLEN_P(arg), &lval, &dval, (allowed_types & (MAY_BE_TRUE|MAY_BE_BOOL)) ? 1 : -1))) {
-						if (!(allowed_types & MAY_BE_BOOL) && !(allowed_types & (Z_STRLEN_P(arg) == 0 ? MAY_BE_FALSE : MAY_BE_TRUE))) {
-							return 0;
-						}
-					} else if (type == IS_LONG) {
-						if (allowed_types & MAY_BE_LONG) {
-							ZVAL_LONG(arg, lval);
-						} else {
-							ZVAL_DOUBLE(arg, (double) lval);
-						}
-						return 1;
-					} else {
-						if (allowed_types & MAY_BE_DOUBLE) {
-							ZVAL_DOUBLE(arg, dval);
-						} else {
-							ZVAL_LONG(arg, zend_dval_to_lval_cap(dval));
-						}
-						return 1;
-					}
-				}
+		switch (target_type) {
+			case _IS_BOOL:
 				{
-					zend_bool truth = zend_is_true(arg);
-					zval_dtor(arg);
-					ZVAL_BOOL(arg, truth);
+					zend_bool target;
+					if (!zend_parse_arg_bool_weak(arg, &target)) {
+						return 0;
+					}
+					ZVAL_BOOL(arg, target);
 				}
-				return 1;
+				break;
+			case IS_LONG:
+				{
+					zend_long target;
+					if (!zend_parse_arg_long_weak(arg, &target)) {
+						return 0;
+					}
+					ZVAL_LONG(arg, target);
+				}
+				break;
+			case IS_DOUBLE:
+				{
+					double target;
+					if (!zend_parse_arg_double_weak(arg, &target)) {
+						return 0;
+					}
+					ZVAL_DOUBLE(arg, target);
+				}
+				break;
+			case IS_STRING:
+				{
+					zend_string *target;
+					if (!zend_parse_arg_str_weak(arg, &target)) {
+						return 0;
+					}
+					ZVAL_STR(arg, target);
+				}
+				break;
 		}
-
-		ZEND_ASSERT(0);
+		
+		return 1;
 	}
-
-	if (EXPECTED(arg_type == IS_OBJECT && (allowed_types & MAY_BE_STRING))) {
-		zend_string *dummy;
-		return zend_parse_arg_str_weak(arg, &dummy);
-	}
-
+				
 	return 0;
 }
 #undef SCALAR_TYPEMASK
