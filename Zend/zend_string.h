@@ -25,6 +25,8 @@
 
 BEGIN_EXTERN_C()
 
+ZEND_API void _zend_string_snitch(zend_string *str);
+
 ZEND_API extern zend_string *(*zend_new_interned_string)(zend_string *str);
 ZEND_API extern void (*zend_interned_strings_snapshot)(void);
 ZEND_API extern void (*zend_interned_strings_restore)(void);
@@ -260,6 +262,7 @@ static zend_always_inline zend_string *zend_string_safe_realloc(zend_string *s, 
 static zend_always_inline void zend_string_free(zend_string *s)
 {
 	if (!ZSTR_IS_INTERNED(s)) {
+		_zend_string_snitch(s);
 		ZEND_ASSERT(GC_REFCOUNT(s) <= 1);
 		pefree(s, GC_FLAGS(s) & IS_STR_PERSISTENT);
 	}
@@ -269,6 +272,7 @@ static zend_always_inline void zend_string_release(zend_string *s)
 {
 	if (!ZSTR_IS_INTERNED(s)) {
 		if (--GC_REFCOUNT(s) == 0) {
+			_zend_string_snitch(s);
 			pefree(s, GC_FLAGS(s) & IS_STR_PERSISTENT);
 		}
 	}

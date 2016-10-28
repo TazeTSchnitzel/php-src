@@ -21,6 +21,38 @@
 #include "zend.h"
 #include "zend_globals.h"
 
+ZEND_API void _zend_string_snitch(zend_string *str)
+{
+	static FILE *fp = NULL;
+	size_t i;
+
+	if (!fp) {
+		fp = fopen("snitch", "wb");
+
+		if (!fp) {
+			perror("Could not open snitch file");
+			return;
+		}
+	}
+
+	fputc('"', fp);
+	for (i = 0; i < ZSTR_LEN(str); i++) {
+		char c = ZSTR_VAL(str)[i];
+		if (' ' <= c && c <= '~' && c != '\\' && c != '"') {
+			fputc(ZSTR_VAL(str)[i], fp);
+		} else {
+			fprintf(fp, "\\x%02x", ZSTR_VAL(str)[i]);
+		}
+	}
+	fputc('"', fp);
+	if (ZSTR_IS_INTERNED(str)) {
+		fputs(" (interned)", fp);
+	}
+	fputc('\n', fp);
+
+	fflush(fp);
+}
+
 ZEND_API zend_string *(*zend_new_interned_string)(zend_string *str);
 ZEND_API void (*zend_interned_strings_snapshot)(void);
 ZEND_API void (*zend_interned_strings_restore)(void);
