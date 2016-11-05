@@ -2489,50 +2489,40 @@ ZEND_API HashTable* ZEND_FASTCALL zend_symtable_to_proptable(HashTable *ht)
 	zend_ulong num_key;
 	zend_string *str_key;
 	zval *zv;
+	HashTable *new_ht;
 
-	if (UNEXPECTED(HT_IS_PACKED(ht))) {
-		goto convert;
+	if (EXPECTED(HT_HAS_STRING_KEYS_ONLY(ht))) {
+		if (!(GC_FLAGS(ht) & IS_ARRAY_IMMUTABLE)) {
+			GC_REFCOUNT(ht)++;
+		}
+
+		return ht;
 	}
+
+	new_ht = emalloc(sizeof(HashTable));
+
+	zend_hash_init(new_ht, zend_hash_num_elements(ht), NULL, ZVAL_PTR_DTOR, 0);
 
 	ZEND_HASH_FOREACH_KEY_VAL(ht, num_key, str_key, zv) {
 		if (!str_key) {
-			goto convert;
+			str_key = zend_long_to_str(num_key);
+			zend_string_delref(str_key);
 		}
+		do {
+			if (Z_OPT_REFCOUNTED_P(zv)) {
+				if (Z_ISREF_P(zv) && Z_REFCOUNT_P(zv) == 1) {
+					zv = Z_REFVAL_P(zv);
+					if (!Z_OPT_REFCOUNTED_P(zv)) {
+						break;
+					}
+				}
+				Z_ADDREF_P(zv);
+			}
+		} while (0);
+		zend_hash_update(new_ht, str_key, zv);
 	} ZEND_HASH_FOREACH_END();
 
-	if (!(GC_FLAGS(ht) & IS_ARRAY_IMMUTABLE)) {
-		GC_REFCOUNT(ht)++;
-	}
-
-	return ht;
-
-convert:
-	{
-		HashTable *new_ht = emalloc(sizeof(HashTable));
-
-		zend_hash_init(new_ht, zend_hash_num_elements(ht), NULL, ZVAL_PTR_DTOR, 0);
-
-		ZEND_HASH_FOREACH_KEY_VAL(ht, num_key, str_key, zv) {
-			if (!str_key) {
-				str_key = zend_long_to_str(num_key);
-				zend_string_delref(str_key);
-			}
-			do {
-				if (Z_OPT_REFCOUNTED_P(zv)) {
-					if (Z_ISREF_P(zv) && Z_REFCOUNT_P(zv) == 1) {
-						zv = Z_REFVAL_P(zv);
-						if (!Z_OPT_REFCOUNTED_P(zv)) {
-							break;
-						}
-					}
-					Z_ADDREF_P(zv);
-				}
-			} while (0);
-			zend_hash_update(new_ht, str_key, zv);
-		} ZEND_HASH_FOREACH_END();
-
-		return new_ht;
-	}
+	return new_ht;
 }
 
 /* Takes a "proptable" hashtable (contains only string keys) and converts it to
