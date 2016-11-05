@@ -41,6 +41,8 @@
 #define HASH_FLAG_INITIALIZED      (1<<3)
 #define HASH_FLAG_STATIC_KEYS      (1<<4) /* long and interned strings */
 #define HASH_FLAG_HAS_EMPTY_IND    (1<<5)
+#define HASH_FLAG_STRING_KEYS      (1<<6)
+#define HASH_FLAG_LONG_KEYS        (1<<7) /* used only for non-packed HT */
 
 #define HT_IS_PACKED(ht) \
 	(((ht)->u.flags & HASH_FLAG_PACKED) != 0)
@@ -50,6 +52,18 @@
 
 #define HT_HAS_STATIC_KEYS_ONLY(ht) \
 	(((ht)->u.flags & (HASH_FLAG_PACKED|HASH_FLAG_STATIC_KEYS)) != 0)
+
+#define HT_HAS_STRING_KEYS(ht) \
+	(((ht)->u.flags & HASH_FLAG_STRING_KEYS) != 0)
+
+#define HT_HAS_STRING_KEYS_ONLY(ht) \
+	(!((ht)->u.flags & (HASH_FLAG_PACKED|HASH_FLAG_LONG_KEYS)))
+
+#define HT_HAS_LONG_KEYS(ht) \
+	(((ht)->u.flags & HASH_FLAG_LONG_KEYS) != 0)
+
+#define HT_HAS_LONG_KEYS_ONLY(ht) \
+	(!((ht)->u.flags & HASH_FLAG_STRING_KEYS))
 
 typedef struct _zend_hash_key {
 	zend_ulong h;
@@ -939,6 +953,7 @@ static zend_always_inline zval *_zend_hash_append(HashTable *ht, zend_string *ke
 	Bucket *p = ht->arData + idx;
 
 	ZVAL_COPY_VALUE(&p->val, zv);
+	ht->u.flags |= HASH_FLAG_STRING_KEYS;
 	if (!ZSTR_IS_INTERNED(key)) {
 		ht->u.flags &= ~HASH_FLAG_STATIC_KEYS;
 		zend_string_addref(key);
@@ -961,6 +976,7 @@ static zend_always_inline zval *_zend_hash_append_ptr(HashTable *ht, zend_string
 	Bucket *p = ht->arData + idx;
 
 	ZVAL_PTR(&p->val, ptr);
+	ht->u.flags |= HASH_FLAG_STRING_KEYS;
 	if (!ZSTR_IS_INTERNED(key)) {
 		ht->u.flags &= ~HASH_FLAG_STATIC_KEYS;
 		zend_string_addref(key);
@@ -983,6 +999,7 @@ static zend_always_inline void _zend_hash_append_ind(HashTable *ht, zend_string 
 	Bucket *p = ht->arData + idx;
 
 	ZVAL_INDIRECT(&p->val, ptr);
+	ht->u.flags |= HASH_FLAG_STRING_KEYS;
 	if (!ZSTR_IS_INTERNED(key)) {
 		ht->u.flags &= ~HASH_FLAG_STATIC_KEYS;
 		zend_string_addref(key);

@@ -50,16 +50,14 @@ static int php_json_determine_array_type(zval *val) /* {{{ */
 
 		if (HT_IS_PACKED(myht) && HT_IS_WITHOUT_HOLES(myht)) {
 			return PHP_JSON_OUTPUT_ARRAY;
+		} else if (HT_HAS_STRING_KEYS(myht)) {
+			return PHP_JSON_OUTPUT_OBJECT;
 		}
 
 		idx = 0;
 		ZEND_HASH_FOREACH_KEY(myht, index, key) {
-			if (key) {
+			if (index != idx) {
 				return PHP_JSON_OUTPUT_OBJECT;
-			} else {
-				if (index != idx) {
-					return PHP_JSON_OUTPUT_OBJECT;
-				}
 			}
 			idx++;
 		} ZEND_HASH_FOREACH_END();

@@ -3485,10 +3485,12 @@ static int is_map(zval *array)
 
 	if (HT_IS_PACKED(Z_ARRVAL_P(array)) && HT_IS_WITHOUT_HOLES(Z_ARRVAL_P(array))) {
 		return FALSE;
+	} else if (HT_HAS_STRING_KEYS(Z_ARRVAL_P(array))) {
+		return TRUE;
 	}
 
 	ZEND_HASH_FOREACH_KEY(Z_ARRVAL_P(array), index, key) {
-		if (key || index != i) {
+		if (index != i) {
 			return TRUE;
 		}
 		i++;

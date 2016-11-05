@@ -207,6 +207,7 @@ ZEND_API void ZEND_FASTCALL zend_hash_packed_to_hash(HashTable *ht)
 	Bucket *old_buckets = ht->arData;
 
 	HT_ASSERT(GC_REFCOUNT(ht) == 1);
+	ht->u.flags |= HASH_FLAG_LONG_KEYS;
 	ht->u.flags &= ~HASH_FLAG_PACKED;
 	new_data = pemalloc(HT_SIZE_EX(ht->nTableSize, -ht->nTableSize), (ht)->u.flags & HASH_FLAG_PERSISTENT);
 	ht->nTableMask = -ht->nTableSize;
@@ -598,9 +599,10 @@ add_to_hash:
 	zend_hash_iterators_update(ht, HT_INVALID_IDX, idx);
 	p = ht->arData + idx;
 	p->key = key;
+	ht->u.flags |= HASH_FLAG_STRING_KEYS;
 	if (!ZSTR_IS_INTERNED(key)) {
-		zend_string_addref(key);
 		ht->u.flags &= ~HASH_FLAG_STATIC_KEYS;
+		zend_string_addref(key);
 		zend_string_hash_val(key);
 	}
 	p->h = h = ZSTR_H(key);
@@ -793,6 +795,7 @@ convert_to_hash:
 	ZEND_HASH_IF_FULL_DO_RESIZE(ht);		/* If the Hash table is full, resize it */
 
 add_to_hash:
+	ht->u.flags |= HASH_FLAG_LONG_KEYS;
 	idx = ht->nNumUsed++;
 	ht->nNumOfElements++;
 	if (ht->nInternalPointer == HT_INVALID_IDX) {
