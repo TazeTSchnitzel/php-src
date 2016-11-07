@@ -842,11 +842,12 @@ echo_expr:
 ;
 
 echoln_expr_list:
-		echoln_expr_list ',' echoln_expr { $$ = zend_ast_list_add($1, $3); }
+		echo_expr_list ',' echoln_expr { $$ = zend_ast_list_add($1, $3); }
 	|	echoln_expr { $$ = zend_ast_create_list(1, ZEND_AST_STMT_LIST, $1); }
 ;
 echoln_expr:
 	expr { $$ = zend_ast_create(ZEND_AST_ECHOLN, $1); }
+;
 
 for_exprs:
 		/* empty */			{ $$ = NULL; }
