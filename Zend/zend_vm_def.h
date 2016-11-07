@@ -1498,6 +1498,14 @@ ZEND_VM_HANDLER(40, ZEND_ECHO, CONST|TMPVAR|CV, ANY)
 		zend_string_release(str);
 	}
 
+	if (opline->extended_value & (1 << 1)) {
+#ifdef PHP_WIN32
+		zend_write("\r\n", 2);
+#else
+		zend_write("\n", 1);
+#endif
+	}
+
 	FREE_OP1();
 	ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
 }

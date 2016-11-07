@@ -58,6 +58,7 @@ static YYSIZE_T zend_yytnamerr(char*, const char*);
 %left T_LOGICAL_XOR
 %left T_LOGICAL_AND
 %right T_PRINT
+%right T_PRINTLN
 %right T_YIELD
 %right T_DOUBLE_ARROW
 %right T_YIELD_FROM
@@ -106,6 +107,7 @@ static YYSIZE_T zend_yytnamerr(char*, const char*);
 %token T_LOGICAL_XOR  "xor (T_LOGICAL_XOR)"
 %token T_LOGICAL_AND  "and (T_LOGICAL_AND)"
 %token T_PRINT        "print (T_PRINT)"
+%token T_PRINTLN      "println (T_PRINTLN)"
 %token T_YIELD        "yield (T_YIELD)"
 %token T_YIELD_FROM   "yield from (T_YIELD_FROM)"
 %token T_PLUS_EQUAL   "+= (T_PLUS_EQUAL)"
@@ -148,6 +150,7 @@ static YYSIZE_T zend_yytnamerr(char*, const char*);
 %token T_ELSE      "else (T_ELSE)"
 %token T_ENDIF     "endif (T_ENDIF)"
 %token T_ECHO       "echo (T_ECHO)"
+%token T_ECHOLN     "echoln (T_ECHOLN)"
 %token T_DO         "do (T_DO)"
 %token T_WHILE      "while (T_WHILE)"
 %token T_ENDWHILE   "endwhile (T_ENDWHILE)"
@@ -251,7 +254,7 @@ static YYSIZE_T zend_yytnamerr(char*, const char*);
 %type <ast> ctor_arguments alt_if_stmt_without_else trait_adaptation_list lexical_vars
 %type <ast> lexical_var_list encaps_list
 %type <ast> array_pair non_empty_array_pair_list array_pair_list possible_array_pair
-%type <ast> isset_variable type return_type type_expr
+%type <ast> isset_variable type return_type type_expr echoln_expr echoln_expr_list
 %type <ast> identifier
 
 %type <num> returns_ref function is_reference is_variadic variable_modifiers
@@ -273,7 +276,7 @@ reserved_non_modifiers:
 	| T_THROW | T_USE | T_INSTEADOF | T_GLOBAL | T_VAR | T_UNSET | T_ISSET | T_EMPTY | T_CONTINUE | T_GOTO
 	| T_FUNCTION | T_CONST | T_RETURN | T_PRINT | T_YIELD | T_LIST | T_SWITCH | T_ENDSWITCH | T_CASE | T_DEFAULT | T_BREAK
 	| T_ARRAY | T_CALLABLE | T_EXTENDS | T_IMPLEMENTS | T_NAMESPACE | T_TRAIT | T_INTERFACE | T_CLASS
-	| T_CLASS_C | T_TRAIT_C | T_FUNC_C | T_METHOD_C | T_LINE | T_FILE | T_DIR | T_NS_C
+	| T_CLASS_C | T_TRAIT_C | T_FUNC_C | T_METHOD_C | T_LINE | T_FILE | T_DIR | T_NS_C | T_PRINTLN | T_ECHOLN
 ;
 
 semi_reserved:
@@ -432,6 +435,7 @@ statement:
 	|	T_GLOBAL global_var_list ';'	{ $$ = $2; }
 	|	T_STATIC static_var_list ';'	{ $$ = $2; }
 	|	T_ECHO echo_expr_list ';'		{ $$ = $2; }
+	|	T_ECHOLN echoln_expr_list ';'	{ $$ = $2; }
 	|	T_INLINE_HTML { $$ = zend_ast_create(ZEND_AST_ECHO, $1); }
 	|	expr ';' { $$ = $1; }
 	|	T_UNSET '(' unset_variables ')' ';' { $$ = $3; }
@@ -837,6 +841,13 @@ echo_expr:
 	expr { $$ = zend_ast_create(ZEND_AST_ECHO, $1); }
 ;
 
+echoln_expr_list:
+		echoln_expr_list ',' echoln_expr { $$ = zend_ast_list_add($1, $3); }
+	|	echoln_expr { $$ = zend_ast_create_list(1, ZEND_AST_STMT_LIST, $1); }
+;
+echoln_expr:
+	expr { $$ = zend_ast_create(ZEND_AST_ECHOLN, $1); }
+
 for_exprs:
 		/* empty */			{ $$ = NULL; }
 	|	non_empty_for_exprs	{ $$ = $1; }
@@ -969,6 +980,7 @@ expr_without_variable:
 	|	scalar { $$ = $1; }
 	|	'`' backticks_expr '`' { $$ = zend_ast_create(ZEND_AST_SHELL_EXEC, $2); }
 	|	T_PRINT expr { $$ = zend_ast_create(ZEND_AST_PRINT, $2); }
+	|	T_PRINTLN expr { $$ = zend_ast_create(ZEND_AST_PRINTLN, $2); }
 	|	T_YIELD { $$ = zend_ast_create(ZEND_AST_YIELD, NULL, NULL); CG(extra_fn_flags) |= ZEND_ACC_GENERATOR; }
 	|	T_YIELD expr { $$ = zend_ast_create(ZEND_AST_YIELD, $2, NULL); CG(extra_fn_flags) |= ZEND_ACC_GENERATOR; }
 	|	T_YIELD expr T_DOUBLE_ARROW expr { $$ = zend_ast_create(ZEND_AST_YIELD, $4, $2); CG(extra_fn_flags) |= ZEND_ACC_GENERATOR; }

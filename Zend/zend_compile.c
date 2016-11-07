@@ -4226,7 +4226,7 @@ void zend_compile_echo(zend_ast *ast) /* {{{ */
 	zend_compile_expr(&expr_node, expr_ast);
 
 	opline = zend_emit_op(NULL, ZEND_ECHO, &expr_node, NULL);
-	opline->extended_value = 0;
+	opline->extended_value = 0 | ((ast->kind == ZEND_AST_ECHOLN) << 1);
 }
 /* }}} */
 
@@ -6965,7 +6965,7 @@ void zend_compile_print(znode *result, zend_ast *ast) /* {{{ */
 	zend_compile_expr(&expr_node, expr_ast);
 
 	opline = zend_emit_op(NULL, ZEND_ECHO, &expr_node, NULL);
-	opline->extended_value = 1;
+	opline->extended_value = 1 | ((ast->kind == ZEND_AST_PRINTLN) << 1);
 
 	result->op_type = IS_CONST;
 	ZVAL_LONG(&result->u.constant, 1);
@@ -7753,6 +7753,7 @@ void zend_compile_stmt(zend_ast *ast) /* {{{ */
 			zend_compile_return(ast);
 			break;
 		case ZEND_AST_ECHO:
+		case ZEND_AST_ECHOLN:
 			zend_compile_echo(ast);
 			break;
 		case ZEND_AST_THROW:
@@ -7910,6 +7911,7 @@ void zend_compile_expr(znode *result, zend_ast *ast) /* {{{ */
 			zend_compile_coalesce(result, ast);
 			return;
 		case ZEND_AST_PRINT:
+		case ZEND_AST_PRINTLN:
 			zend_compile_print(result, ast);
 			return;
 		case ZEND_AST_EXIT:

@@ -1259,8 +1259,16 @@ NEWLINE ("\r"|"\n"|"\r\n")
 	RETURN_TOKEN(T_ECHO);
 }
 
+<ST_IN_SCRIPTING>"echoln" {
+	RETURN_TOKEN(T_ECHOLN);
+}
+
 <ST_IN_SCRIPTING>"print" {
 	RETURN_TOKEN(T_PRINT);
+}
+
+<ST_IN_SCRIPTING>"println" {
+	RETURN_TOKEN(T_PRINTLN);
 }
 
 <ST_IN_SCRIPTING>"class" {
