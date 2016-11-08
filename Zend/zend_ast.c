@@ -1242,6 +1242,8 @@ simple_list:
 			break;
 		case ZEND_AST_PRINT:
 			PREFIX_OP("print ", 60, 61);
+		case ZEND_AST_PRINTLN:
+			PREFIX_OP("println ", 60, 61);
 		case ZEND_AST_INCLUDE_OR_EVAL:
 			switch (ast->attr) {
 				case ZEND_INCLUDE_ONCE: FUNC_OP("include_once");
@@ -1286,6 +1288,8 @@ simple_list:
 			APPEND_STR("__HALT_COMPILER()");
 		case ZEND_AST_ECHO:
 			APPEND_NODE_1("echo");
+		case ZEND_AST_ECHOLN:
+			APPEND_NODE_1("echoln");
 		case ZEND_AST_THROW:
 			APPEND_NODE_1("throw");
 		case ZEND_AST_GOTO:
