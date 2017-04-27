@@ -647,6 +647,10 @@ static ZEND_COLD void zend_verify_type_error_common(
 				*need_msg = "be iterable";
 				*need_kind = "";
 				break;
+			case IS_CLASSLIKE:
+				*need_msg = "be classlike";
+				*need_kind = "";
+				break;
 			default:
 				*need_msg = "be of the type ";
 				*need_kind = zend_get_type_by_const(ZEND_TYPE_CODE(arg_info->type));
@@ -818,6 +822,12 @@ static zend_always_inline zend_bool zend_check_type(
 		return zend_is_callable(arg, IS_CALLABLE_CHECK_SILENT, NULL);
 	} else if (ZEND_TYPE_CODE(type) == IS_ITERABLE) {
 		return zend_is_iterable(arg);
+	} else if (ZEND_TYPE_CODE(type) == IS_CLASSLIKE) {
+		return zend_is_class(arg, 1, 1);
+	} else if (ZEND_TYPE_CODE(type) == IS_CLASS) {
+		return zend_is_class(arg, 1, 0);
+	} else if (ZEND_TYPE_CODE(type) == IS_INTERFACE) {
+		return zend_is_class(arg, 0, 1);
 	} else if (ZEND_TYPE_CODE(type) == _IS_BOOL &&
 			   EXPECTED(Z_TYPE_P(arg) == IS_FALSE || Z_TYPE_P(arg) == IS_TRUE)) {
 		return 1;

@@ -2102,6 +2102,8 @@ static uint32_t zend_fetch_arg_info(const zend_script *script, zend_arg_info *ar
 			tmp |= MAY_BE_ARRAY|MAY_BE_ARRAY_KEY_ANY|MAY_BE_ARRAY_OF_ANY|MAY_BE_ARRAY_OF_REF;
 		} else if (type_hint == _IS_BOOL) {
 			tmp |= MAY_BE_TRUE|MAY_BE_FALSE;
+		} else if (type_hint == IS_CLASSLIKE || type_hint == IS_CLASS || type_hint == IS_INTERFACE) {
+			tmp |= MAY_BE_STRING;
 		} else {
 			ZEND_ASSERT(type_hint < IS_REFERENCE);
 			tmp |= 1 << type_hint;

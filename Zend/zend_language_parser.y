@@ -655,6 +655,8 @@ type_expr:
 type:
 		T_ARRAY		{ $$ = zend_ast_create_ex(ZEND_AST_TYPE, IS_ARRAY); }
 	|	T_CALLABLE	{ $$ = zend_ast_create_ex(ZEND_AST_TYPE, IS_CALLABLE); }
+	|	T_CLASS		{ $$ = zend_ast_create_ex(ZEND_AST_TYPE, IS_CLASS); }
+	|	T_INTERFACE	{ $$ = zend_ast_create_ex(ZEND_AST_TYPE, IS_INTERFACE); }
 	|	name		{ $$ = $1; }
 ;
 
