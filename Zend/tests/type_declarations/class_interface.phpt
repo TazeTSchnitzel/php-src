@@ -36,19 +36,11 @@ function accepts_interface(interface $c) {
 }
 
 accepts_class(MyClass::class);
-try {
-    accepts_class(MyInterface::class);
-} catch (Error $e) {
-    blurb($e);
-}
+accepts_class(MyInterface::class);
 
 $create = true;
 accepts_class(MyAutoloadedClass::class);
-try {
-    accepts_class(MyAutoloadedInterface::class);
-} catch (Error $e) {
-    blurb($e);
-}
+accepts_class(MyAutoloadedInterface::class);
 
 $create = false;
 try {
@@ -92,13 +84,13 @@ try {
 ?>
 --EXPECTF--
 accepts_class: string(7) "MyClass"
-TypeError: Argument 1 passed to accepts_class() must be of the type class, string given, called in %s on line %d
+accepts_class: string(11) "MyInterface"
 Autoloader called for MyAutoloadedClass
 Creating class MyAutoloadedClass
 accepts_class: string(17) "MyAutoloadedClass"
 Autoloader called for MyAutoloadedInterface
 Creating interface MyAutoloadedInterface
-TypeError: Argument 1 passed to accepts_class() must be of the type class, string given, called in %s on line %d
+accepts_class: string(21) "MyAutoloadedInterface"
 Autoloader called for MyMissingClass
 TypeError: Argument 1 passed to accepts_class() must be of the type class, string given, called in %s on line %d
 Autoloader called for MyMissingInterface

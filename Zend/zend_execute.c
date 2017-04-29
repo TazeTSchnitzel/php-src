@@ -819,9 +819,9 @@ static zend_always_inline zend_bool zend_check_type(
 	} else if (ZEND_TYPE_CODE(type) == IS_ITERABLE) {
 		return zend_is_iterable(arg);
 	} else if (ZEND_TYPE_CODE(type) == IS_CLASS) {
-		return zend_is_class(arg, 1, 0);
+		return zend_is_class(arg, 1);
 	} else if (ZEND_TYPE_CODE(type) == IS_INTERFACE) {
-		return zend_is_class(arg, 0, 1);
+		return zend_is_class(arg, 0);
 	} else if (ZEND_TYPE_CODE(type) == _IS_BOOL &&
 			   EXPECTED(Z_TYPE_P(arg) == IS_FALSE || Z_TYPE_P(arg) == IS_TRUE)) {
 		return 1;
