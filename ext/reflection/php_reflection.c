@@ -2906,7 +2906,6 @@ static zend_string *reflection_type_name(type_reference *param) {
 		case IS_DOUBLE:       return zend_string_init("float", sizeof("float") - 1, 0);
 		case IS_VOID:         return zend_string_init("void", sizeof("void") - 1, 0);
 		case IS_ITERABLE:     return zend_string_init("iterable", sizeof("iterable") - 1, 0);
-		case IS_CLASSLIKE:    return zend_string_init("classlike", sizeof("classlike") - 1, 0);
 		case IS_CLASS:        return zend_string_init("class", sizeof("class") - 1, 0);
 		case IS_INTERFACE:    return zend_string_init("interface", sizeof("interface") - 1, 0);
 		EMPTY_SWITCH_DEFAULT_CASE()

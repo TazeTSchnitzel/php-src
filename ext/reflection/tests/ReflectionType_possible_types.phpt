@@ -12,7 +12,6 @@ $functions = [
     function(): array {},
     function(): callable {},
     function(): iterable {},
-    function(): classlike {},
     function(): class {},
     function(): interface {},
     function(): StdClass {}
@@ -33,7 +32,6 @@ string(4) "bool"
 string(5) "array"
 string(8) "callable"
 string(8) "iterable"
-string(9) "classlike"
 string(5) "class"
 string(9) "interface"
 string(8) "StdClass"

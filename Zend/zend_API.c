@@ -189,8 +189,6 @@ ZEND_API char *zend_get_type_by_const(int type) /* {{{ */
 			return "array";
 		case IS_VOID:
 			return "void";
-		case IS_CLASSLIKE:
-			return "classlike";
 		case IS_CLASS:
 			return "class";
 		case IS_INTERFACE:

@@ -380,9 +380,8 @@ struct _zend_ast_ref {
 #define IS_CALLABLE					14
 #define IS_ITERABLE					19
 #define IS_VOID						18
-#define IS_CLASSLIKE				21
-#define IS_CLASS					22
-#define IS_INTERFACE				23
+#define IS_CLASS					21
+#define IS_INTERFACE				22
 
 /* internal types */
 #define IS_INDIRECT             	15
