@@ -1191,10 +1191,9 @@ simple_list:
 			break;
 		case ZEND_AST_TYPE:
 			switch (ast->attr) {
-				case IS_ARRAY:        APPEND_STR("array");
-				case IS_CALLABLE:     APPEND_STR("callable");
-				case IS_CLASS:        APPEND_STR("class");
-				case IS_INTERFACE:    APPEND_STR("interface");
+				case IS_ARRAY:    APPEND_STR("array");
+				case IS_CALLABLE: APPEND_STR("callable");
+				case IS_CLASS:    APPEND_STR("class");
 				EMPTY_SWITCH_DEFAULT_CASE();
 			}
 			break;

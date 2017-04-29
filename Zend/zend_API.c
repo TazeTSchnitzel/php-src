@@ -191,8 +191,6 @@ ZEND_API char *zend_get_type_by_const(int type) /* {{{ */
 			return "void";
 		case IS_CLASS:
 			return "class";
-		case IS_INTERFACE:
-			return "interface";
 		default:
 			return "unknown";
 	}
@@ -3447,7 +3445,7 @@ ZEND_API zend_bool zend_make_callable(zval *callable, zend_string **callable_nam
 }
 /* }}} */
 
-ZEND_API zend_bool zend_is_class(zval *class, zend_bool allow_class) /* {{{ */
+ZEND_API zend_bool zend_is_class(zval *class) /* {{{ */
 {
 again:
 	if (Z_TYPE_P(class) == IS_STRING) {
@@ -3458,10 +3456,6 @@ again:
 		}
 
 		if (ce->ce_flags & ZEND_ACC_TRAIT) {
-			return 0;
-		}
-
-		if (!allow_class && !(ce->ce_flags & ZEND_ACC_INTERFACE)) {
 			return 0;
 		}
 

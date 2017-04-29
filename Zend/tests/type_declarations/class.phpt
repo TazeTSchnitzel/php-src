@@ -1,5 +1,5 @@
 --TEST--
-class and interface types
+class type
 --FILE--
 <?php
 
@@ -30,11 +30,6 @@ function accepts_class(class $c) {
     var_dump($c);
 }
 
-function accepts_interface(interface $c) {
-    echo __FUNCTION__, ": ";
-    var_dump($c);
-}
-
 accepts_class(MyClass::class);
 accepts_class(MyInterface::class);
 
@@ -54,33 +49,6 @@ try {
     blurb($e);
 }
 
-try {
-    accepts_interface(MyClass::class);
-} catch (Error $e) {
-    blurb($e);
-}
-accepts_interface(MyInterface::class);
-
-$create = true;
-try {
-    accepts_interface(My2ndAutoloadedClass::class);
-} catch (Error $e) {
-    blurb($e);
-}
-accepts_interface(My2ndAutoloadedInterface::class);
-
-$create = false;
-try {
-    accepts_interface(MyMissingClass::class);
-} catch (Error $e) {
-    blurb($e);
-}
-try {
-    accepts_interface(MyMissingInterface::class);
-} catch (Error $e) {
-    blurb($e);
-}
-
 ?>
 --EXPECTF--
 accepts_class: string(7) "MyClass"
@@ -95,15 +63,3 @@ Autoloader called for MyMissingClass
 TypeError: Argument 1 passed to accepts_class() must be of the type class, string given, called in %s on line %d
 Autoloader called for MyMissingInterface
 TypeError: Argument 1 passed to accepts_class() must be of the type class, string given, called in %s on line %d
-TypeError: Argument 1 passed to accepts_interface() must be of the type interface, string given, called in %s on line %d
-accepts_interface: string(11) "MyInterface"
-Autoloader called for My2ndAutoloadedClass
-Creating class My2ndAutoloadedClass
-TypeError: Argument 1 passed to accepts_interface() must be of the type interface, string given, called in %s on line %d
-Autoloader called for My2ndAutoloadedInterface
-Creating interface My2ndAutoloadedInterface
-accepts_interface: string(24) "My2ndAutoloadedInterface"
-Autoloader called for MyMissingClass
-TypeError: Argument 1 passed to accepts_interface() must be of the type interface, string given, called in %s on line %d
-Autoloader called for MyMissingInterface
-TypeError: Argument 1 passed to accepts_interface() must be of the type interface, string given, called in %s on line %d

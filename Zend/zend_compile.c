@@ -5303,11 +5303,6 @@ void zend_compile_params(zend_ast *ast, zend_ast *return_type_ast) /* {{{ */
 						zend_error_noreturn(E_COMPILE_ERROR, "Default value for parameters "
 							"with class type can only be NULL");
 					}
-				} else if (ZEND_TYPE_CODE(arg_info->type) == IS_INTERFACE && default_ast) {
-					if (!has_null_default && !Z_CONSTANT(default_node.u.constant)) {
-						zend_error_noreturn(E_COMPILE_ERROR, "Default value for parameters "
-							"with interface type can only be NULL");
-					}
 				}
 			} else {
 				if (default_ast && !has_null_default && !Z_CONSTANT(default_node.u.constant)) {
