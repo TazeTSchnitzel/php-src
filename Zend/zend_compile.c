@@ -5299,9 +5299,12 @@ void zend_compile_params(zend_ast *ast, zend_ast *return_type_ast) /* {{{ */
 							"with callable type can only be NULL");
 					}
 				} else if (ZEND_TYPE_CODE(arg_info->type) == IS_CLASS && default_ast) {
-					if (!has_null_default && !Z_CONSTANT(default_node.u.constant)) {
+					if (!has_null_default
+						&& Z_TYPE(default_node.u.constant) != IS_STRING
+						&& !Z_CONSTANT(default_node.u.constant)
+					) {
 						zend_error_noreturn(E_COMPILE_ERROR, "Default value for parameters "
-							"with class type can only be NULL");
+							"with class type can only be a string or NULL");
 					}
 				}
 			} else {
