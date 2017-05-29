@@ -12,32 +12,26 @@
    | obtain it through the world-wide-web, please send a note to          |
    | license@zend.com so we can mail you a copy immediately.              |
    +----------------------------------------------------------------------+
-   | Authors: Sterling Hughes <sterling@php.net>                          |
-   |          Marcus Boerger <helly@php.net>                              |
+   | Authors: Andrea Faulds <ajf@ajf.me>                                  |
    +----------------------------------------------------------------------+
 */
 
 /* $Id$ */
 
-#include "zend.h"
-#include "zend_API.h"
-#include "zend_builtin_functions.h"
-#include "zend_interfaces.h"
-#include "zend_exceptions.h"
-#include "zend_closures.h"
-#include "zend_generators.h"
-#include "zend_enums.h"
+#ifndef ZEND_ENUMS_H
+#define ZEND_ENUMS_H
 
+BEGIN_EXTERN_C()
 
-ZEND_API void zend_register_default_classes(void)
-{
-	zend_register_interfaces();
-	zend_register_default_exception();
-	zend_register_iterator_wrapper();
-	zend_register_closure_ce();
-	zend_register_generator_ce();
-	zend_register_enum_ce();
-}
+extern zend_class_entry *zend_ce_enum;
+
+void zend_register_enum_ce(void);
+void zend_create_user_enum(zend_class_entry *ce, zend_string *name, zend_string *lcname, zend_string *filename, uint32_t line_start, uint32_t line_end, zend_string *doc_comment);
+zend_string *zend_create_user_enum_member(zend_class_entry *ce_enum, zend_class_entry *ce, zend_string *name, zend_string *filename, uint32_t line_start, uint32_t line_end, zend_string *doc_comment);
+
+END_EXTERN_C()
+
+#endif
 
 /*
  * Local variables:

@@ -191,6 +191,7 @@ static YYSIZE_T zend_yytnamerr(char*, const char*);
 %token T_INTERFACE  "interface (T_INTERFACE)"
 %token T_EXTENDS    "extends (T_EXTENDS)"
 %token T_IMPLEMENTS "implements (T_IMPLEMENTS)"
+%token T_ENUM       "enum (T_ENUM)"
 %token T_OBJECT_OPERATOR "-> (T_OBJECT_OPERATOR)"
 %token T_DOUBLE_ARROW    "=> (T_DOUBLE_ARROW)"
 %token T_LIST            "list (T_LIST)"
@@ -228,6 +229,7 @@ static YYSIZE_T zend_yytnamerr(char*, const char*);
 %type <ast> top_statement namespace_name name statement function_declaration_statement
 %type <ast> class_declaration_statement trait_declaration_statement
 %type <ast> interface_declaration_statement interface_extends_list
+%type <ast> enum_declaration_statement enum_member_list enum_member
 %type <ast> group_use_declaration inline_use_declarations inline_use_declaration
 %type <ast> mixed_group_use_declaration use_declaration unprefixed_use_declaration
 %type <ast> unprefixed_use_declarations const_decl inner_statement
@@ -312,6 +314,7 @@ top_statement:
 	|	class_declaration_statement			{ $$ = $1; }
 	|	trait_declaration_statement			{ $$ = $1; }
 	|	interface_declaration_statement		{ $$ = $1; }
+	|	enum_declaration_statement			{ $$ = $1; }
 	|	T_HALT_COMPILER '(' ')' ';'
 			{ $$ = zend_ast_create(ZEND_AST_HALT_COMPILER,
 			      zend_ast_create_zval_from_long(zend_get_scanned_file_offset()));
@@ -413,6 +416,7 @@ inner_statement:
 	|	class_declaration_statement 		{ $$ = $1; }
 	|	trait_declaration_statement			{ $$ = $1; }
 	|	interface_declaration_statement		{ $$ = $1; }
+	|	enum_declaration_statement			{ $$ = $1; }
 	|	T_HALT_COMPILER '(' ')' ';'
 			{ $$ = NULL; zend_error_noreturn(E_COMPILE_ERROR,
 			      "__HALT_COMPILER() can only be used from the outermost scope"); }
@@ -544,6 +548,24 @@ interface_extends_list:
 implements_list:
 		/* empty */				{ $$ = NULL; }
 	|	T_IMPLEMENTS name_list	{ $$ = $2; }
+;
+
+enum_declaration_statement:
+	T_ENUM { $<num>$ = CG(zend_lineno); }
+	T_STRING backup_doc_comment '{' enum_member_list '}'
+		{ $$ = zend_ast_create_decl(ZEND_AST_ENUM, 0, $<num>2, $4, zend_ast_get_str($3), $6, NULL, NULL, NULL); }
+;
+
+enum_member_list:
+		enum_member_list ',' enum_member
+			{ $$ = zend_ast_list_add($1, $3); }
+	|	enum_member
+			{ $$ = zend_ast_create_list(1, ZEND_AST_STMT_LIST, $1); }
+;
+
+enum_member:
+	T_STRING { $<num>$ = CG(zend_lineno); } backup_doc_comment
+		{ $$ = zend_ast_create_decl(ZEND_AST_ENUM_MEMBER, 0, $<num>2, $3, zend_ast_get_str($1), NULL, NULL, NULL, NULL); }
 ;
 
 foreach_variable:

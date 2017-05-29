@@ -806,7 +806,7 @@ ZEND_API void zend_do_inheritance(zend_class_entry *ce, zend_class_entry *parent
 		}
 
 		/* Class must not extend a final class */
-		if (parent_ce->ce_flags & ZEND_ACC_FINAL) {
+		if (parent_ce->ce_flags & ZEND_ACC_FINAL && !UNEXPECTED(ce->ce_flags & ZEND_ACC_ENUM)) {
 			zend_error_noreturn(E_COMPILE_ERROR, "Class %s may not inherit from final class (%s)", ZSTR_VAL(ce->name), ZSTR_VAL(parent_ce->name));
 		}
 	}
