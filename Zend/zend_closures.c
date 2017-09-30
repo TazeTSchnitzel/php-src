@@ -46,6 +46,8 @@ typedef struct _zend_closure_state_store {
 	zend_object       std;
 	zval              fObj;
 	zval              gObj;
+	zval             *args;
+	int               arg_count;
 } zend_closure_state_store;
 
 /* non-static since it needs to be referenced */
@@ -74,6 +76,7 @@ ZEND_METHOD(Closure, __invoke) /* {{{ */
 /* }}} */
 
 ZEND_NAMED_FUNCTION(zend_closure_compose_handler);
+ZEND_NAMED_FUNCTION(zend_closure_partial_handler);
 
 static zend_bool zend_valid_closure_binding(
 		zend_closure *closure, zval *newthis, zend_class_entry *scope) /* {{{ */
@@ -113,8 +116,9 @@ static zend_bool zend_valid_closure_binding(
 		return 0;
 	}
 
-	if (closure->orig_internal_handler == zend_closure_compose_handler) {
-		zend_error(E_WARNING, "Cannot rebind scope of closure created by function composition");
+	if (closure->orig_internal_handler == zend_closure_compose_handler
+		|| closure->orig_internal_handler == zend_closure_partial_handler) {
+		zend_error(E_WARNING, "Cannot rebind scope of closure created by Closure::compose() or Closure::partial()");
 		return 0;
 	}
 
@@ -394,6 +398,13 @@ static void zend_closure_state_store_free_storage(zend_object *object) /* {{{ */
 	if (Z_TYPE(closure_state_store->gObj) != IS_UNDEF) {
 		zval_ptr_dtor(&closure_state_store->gObj);
 	}
+	if (closure_state_store->args) {
+		int i;
+		for (i = 0; i < closure_state_store->arg_count; i++) {
+			zval_ptr_dtor(&closure_state_store->args[i]);
+		}
+		efree(closure_state_store->args);
+	}
 }
 /* }}} */
 
@@ -519,6 +530,135 @@ ZEND_NAMED_FUNCTION(zend_closure_compose_handler) /* {{{ */
 	zval_dtor(&gResult);
 }
 /* }}} */
+
+
+/* {{{ proto Closure Closure::partial( [, mixed argument] [, mixed ...] )
+       proto Closure partial(callable f [, mixed argument] [, mixed ...] )
+   For a given function and set of arguments, return a closure with those
+   arguments bound as the function's first arguments. */
+ZEND_METHOD(Closure, partial)
+{
+	zval *f;
+	zval fObj;
+	zval *args;
+	int arg_count = 0;
+	zend_closure *fClosure, *zClosure;
+	zend_function *fFunc;
+	zend_internal_function *zFunc;
+	zend_closure_state_store *state_store;
+
+	/* $f->partial(...$args) */
+	if (getThis()) {
+		if (zend_parse_parameters(ZEND_NUM_ARGS(), "*", &args, &arg_count) == FAILURE) {
+			return;
+		}
+
+		ZVAL_COPY(&fObj, getThis());
+	/* partial($f, ...$args); */
+	} else {
+		if (zend_parse_parameters(ZEND_NUM_ARGS(), "z*", &f, &args, &arg_count) == FAILURE) {
+			return;
+		}
+
+		if (zend_callableify(&fObj, f, execute_data) != SUCCESS) {
+			return;
+		}
+	}
+
+	if (arg_count == 0) {
+		ZVAL_COPY(return_value, &fObj);
+		zval_ptr_dtor(&fObj);
+		return;
+	}
+
+	fClosure = (zend_closure*)Z_OBJ(fObj);
+	fFunc = (zend_function*)&fClosure->func;
+
+	zClosure = (zend_closure*)zend_closure_new(zend_ce_closure);
+	zFunc = (zend_internal_function*)&zClosure->func;
+
+	state_store = (zend_closure_state_store*)zend_closure_state_store_new(zend_ce_closure_state_store);
+	ZVAL_COPY_VALUE(&state_store->fObj, &fObj);
+
+	state_store->arg_count = arg_count;
+	state_store->args = safe_emalloc(arg_count, sizeof(zval), 0);
+	memcpy(state_store->args, args, sizeof(zval) * arg_count);
+
+	ZVAL_OBJ(&zClosure->this_ptr, (zend_object*)state_store);
+
+	zClosure->called_scope = zend_ce_closure_state_store;
+	zClosure->orig_internal_handler = zend_closure_partial_handler;
+
+	zFunc->type = ZEND_INTERNAL_FUNCTION;
+	memset(zFunc->arg_flags, 0, sizeof(zFunc->arg_flags));
+	zFunc->fn_flags = ZEND_ACC_PUBLIC; /* because fake method */
+	zFunc->fn_flags |= fFunc->common.fn_flags & (ZEND_ACC_RETURN_REFERENCE | ZEND_ACC_VARIADIC | ZEND_ACC_USER_ARG_INFO);
+	if (fFunc->type == ZEND_USER_FUNCTION) {
+		zFunc->fn_flags |= ZEND_ACC_USER_ARG_INFO;
+	}
+	zFunc->function_name = ZSTR_KNOWN(ZEND_STR_CLOSURE);
+	zFunc->scope = zend_ce_closure_state_store;
+	zFunc->prototype = NULL;
+	/* num_args is unsigned, we must convert to int for MAX(0, -1) to work */
+	zFunc->num_args = MAX(0, (int)fFunc->common.num_args - arg_count);
+	zFunc->required_num_args = MAX(0, (int)fFunc->common.required_num_args - arg_count);
+	zFunc->arg_info = NULL;
+	if (fFunc->common.arg_info) {
+		if (arg_count < fFunc->common.num_args) {
+			zFunc->arg_info = (zend_internal_arg_info*)(fFunc->common.arg_info + arg_count);
+		} else if ((fFunc->common.fn_flags & ZEND_ACC_VARIADIC) && arg_count >= fFunc->common.num_args) {
+			zFunc->arg_info = (zend_internal_arg_info*)(fFunc->common.arg_info + fFunc->common.num_args);
+		}
+	}
+	zend_set_function_arg_flags((zend_function*)zFunc);
+	zFunc->handler = zend_closure_partial_handler;
+
+	RETURN_OBJ((zend_object*)zClosure);
+}
+/* }}} */
+
+
+ZEND_NAMED_FUNCTION(zend_closure_partial_handler) /* {{{ */
+{
+	zval *x_params, *real_params;
+	int x_param_count = 0, real_param_count, i;
+	zend_closure_state_store *data;
+	zend_fcall_info fci = empty_fcall_info;
+	zend_fcall_info_cache fci_cache = empty_fcall_info_cache;
+	zval *fObj;
+
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "*", &x_params, &x_param_count) == FAILURE) {
+		return;
+	}
+
+	data = (zend_closure_state_store*)Z_OBJ_P(getThis());
+	fObj = &data->fObj;
+
+	/* This should never happen as closures will always be callable */
+	if (zend_fcall_info_init(fObj, 0, &fci, &fci_cache, NULL, NULL) != SUCCESS) {
+		ZEND_ASSERT(0);
+	}
+
+	real_param_count = data->arg_count + x_param_count;
+	real_params = safe_emalloc(real_param_count, sizeof(zval), 0);
+
+	for (i = 0; i < data->arg_count; i++) {
+		memcpy(&real_params[i], &data->args[i], sizeof(zval));
+	}
+	for (i = 0; i < x_param_count; i++) {
+		memcpy(&real_params[data->arg_count + i], &x_params[i], sizeof(zval));
+	}
+
+	fci.retval = return_value;
+	fci.param_count = real_param_count;
+	fci.params = real_params;
+
+	zend_call_function(&fci, &fci_cache);
+
+	efree(real_params);
+}
+/* }}} */
+
 
 static ZEND_COLD zend_function *zend_closure_get_constructor(zend_object *object) /* {{{ */
 {
@@ -788,6 +928,10 @@ ZEND_BEGIN_ARG_INFO_EX(arginfo_closure_compose, 0, 0, 2)
 	ZEND_ARG_INFO(0, g)
 ZEND_END_ARG_INFO()
 
+ZEND_BEGIN_ARG_INFO_EX(arginfo_closure_partial, 0, 0, 0)
+	ZEND_ARG_VARIADIC_INFO(0, arguments)
+ZEND_END_ARG_INFO()
+
 static const zend_function_entry closure_functions[] = {
 	ZEND_ME(Closure, __construct, NULL, ZEND_ACC_PRIVATE)
 	ZEND_ME(Closure, bind, arginfo_closure_bind, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC)
@@ -795,6 +939,7 @@ static const zend_function_entry closure_functions[] = {
 	ZEND_ME(Closure, call, arginfo_closure_call, ZEND_ACC_PUBLIC)
 	ZEND_ME(Closure, fromCallable, arginfo_closure_fromcallable, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC)
 	ZEND_ME(Closure, compose, arginfo_closure_compose, ZEND_ACC_PUBLIC)
+	ZEND_ME(Closure, partial, arginfo_closure_partial, ZEND_ACC_PUBLIC)
 	ZEND_FE_END
 };
 
