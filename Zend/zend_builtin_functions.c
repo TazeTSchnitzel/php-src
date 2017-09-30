@@ -232,6 +232,11 @@ ZEND_BEGIN_ARG_INFO_EX(arginfo_extension_loaded, 0, 0, 1)
 	ZEND_ARG_INFO(0, extension_name)
 ZEND_END_ARG_INFO()
 
+ZEND_BEGIN_ARG_INFO_EX(arginfo_compose, 0, 0, 2)
+	ZEND_ARG_INFO(0, f)
+	ZEND_ARG_INFO(0, g)
+ZEND_END_ARG_INFO()
+
 /* }}} */
 
 static const zend_function_entry builtin_functions[] = { /* {{{ */
@@ -293,6 +298,7 @@ static const zend_function_entry builtin_functions[] = { /* {{{ */
 	ZEND_FE(gc_enabled, 		arginfo_zend__void)
 	ZEND_FE(gc_enable, 		arginfo_zend__void)
 	ZEND_FE(gc_disable, 		arginfo_zend__void)
+	ZEND_FENTRY(compose,	ZEND_MN(Closure_compose),	arginfo_compose, 0)
 	ZEND_FE_END
 };
 /* }}} */

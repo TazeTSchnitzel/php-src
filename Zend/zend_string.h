@@ -419,6 +419,7 @@ EMPTY_SWITCH_DEFAULT_CASE()
 	_(ZEND_STR_RESOURCE,               "resource") \
 	_(ZEND_STR_CLOSED_RESOURCE,        "resource (closed)") \
 	_(ZEND_STR_NAME,                   "name") \
+	_(ZEND_STR_CLOSURE,                "{closure}") \
 
 
 typedef enum _zend_known_string_id {

@@ -42,9 +42,18 @@ typedef struct _zend_closure {
 	zif_handler       orig_internal_handler;
 } zend_closure;
 
+typedef struct _zend_closure_state_store {
+	zend_object       std;
+	zval              fObj;
+	zval              gObj;
+} zend_closure_state_store;
+
 /* non-static since it needs to be referenced */
 ZEND_API zend_class_entry *zend_ce_closure;
 static zend_object_handlers closure_handlers;
+
+static zend_class_entry *zend_ce_closure_state_store;
+static zend_object_handlers closure_state_store_handlers;
 
 ZEND_METHOD(Closure, __invoke) /* {{{ */
 {
@@ -63,6 +72,8 @@ ZEND_METHOD(Closure, __invoke) /* {{{ */
 #endif
 }
 /* }}} */
+
+ZEND_NAMED_FUNCTION(zend_closure_compose_handler);
 
 static zend_bool zend_valid_closure_binding(
 		zend_closure *closure, zval *newthis, zend_class_entry *scope) /* {{{ */
@@ -99,6 +110,11 @@ static zend_bool zend_valid_closure_binding(
 
 	if (is_fake_closure && scope != func->common.scope) {
 		zend_error(E_WARNING, "Cannot rebind scope of closure created by ReflectionFunctionAbstract::getClosure()");
+		return 0;
+	}
+
+	if (closure->orig_internal_handler == zend_closure_compose_handler) {
+		zend_error(E_WARNING, "Cannot rebind scope of closure created by function composition");
 		return 0;
 	}
 
@@ -305,26 +321,21 @@ static int zend_create_closure_from_callable(zval *return_value, zval *callable,
 }
 /* }}} */
 
-/* {{{ proto Closure Closure::fromCallable(callable callable)
-   Create a closure from a callable using the current scope. */
-ZEND_METHOD(Closure, fromCallable)
+/* {{{ */
+static int zend_callableify(zval *result, zval *callable, zend_execute_data *execute_data)
 {
-	zval *callable;
 	int success;
 	char *error = NULL;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS(), "z", &callable) == FAILURE) {
-		return;
-	}
-
 	if (Z_TYPE_P(callable) == IS_OBJECT && instanceof_function(Z_OBJCE_P(callable), zend_ce_closure)) {
 		/* It's already a closure */
-		RETURN_ZVAL(callable, 1, 0);
+		ZVAL_COPY(result, callable);
+		return SUCCESS;
 	}
 
 	/* create closure as if it were called from parent scope */
 	EG(current_execute_data) = EX(prev_execute_data);
-	success = zend_create_closure_from_callable(return_value, callable, &error);
+	success = zend_create_closure_from_callable(result, callable, &error);
 	EG(current_execute_data) = execute_data;
 
 	if (success == FAILURE || error) {
@@ -334,7 +345,178 @@ ZEND_METHOD(Closure, fromCallable)
 		} else {
 			zend_throw_exception_ex(zend_ce_type_error, 0, "Failed to create closure from callable");
 		}
+		return FAILURE;
 	}
+
+	return SUCCESS;
+}
+/* }}} */
+
+/* {{{ proto Closure Closure::fromCallable(callable callable)
+   Create a closure from a callable using the current scope. */
+ZEND_METHOD(Closure, fromCallable)
+{
+	zval *callable;
+
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "z", &callable) == FAILURE) {
+		return;
+	}
+
+	zend_callableify(return_value, callable, execute_data);
+}
+/* }}} */
+
+static zend_object *zend_closure_new(zend_class_entry *class_type);
+
+static zend_object *zend_closure_state_store_new(zend_class_entry *class_type) /* {{{ */
+{
+	zend_closure_state_store *closure_state_store;
+
+	closure_state_store = emalloc(sizeof(zend_closure_state_store));
+	memset(closure_state_store, 0, sizeof(zend_closure_state_store));
+
+	zend_object_std_init(&closure_state_store->std, class_type);
+	closure_state_store->std.handlers = &closure_state_store_handlers;
+
+	return (zend_object*)closure_state_store;
+}
+/* }}} */
+
+static void zend_closure_state_store_free_storage(zend_object *object) /* {{{ */
+{
+	zend_closure_state_store *closure_state_store = (zend_closure_state_store *)object;
+
+	zend_object_std_dtor(&closure_state_store->std);
+
+	if (Z_TYPE(closure_state_store->fObj) != IS_UNDEF) {
+		zval_ptr_dtor(&closure_state_store->fObj);
+	}
+	if (Z_TYPE(closure_state_store->gObj) != IS_UNDEF) {
+		zval_ptr_dtor(&closure_state_store->gObj);
+	}
+}
+/* }}} */
+
+/* {{{ proto Closure Closure::compose(callable g)
+       proto Closure compose(callable f, callable g)
+   For functions f(y) and g(x), return a new closure z(x) returning f(g(x)). */
+ZEND_METHOD(Closure, compose)
+{
+	zval *f, *g;
+	zval fObj, gObj;
+	zend_closure *fClosure, *gClosure, *zClosure;
+	zend_function *fFunc, *gFunc;
+	zend_internal_function *zFunc;
+	zend_closure_state_store *state_store;
+
+	/* $f->compose($g) */
+	if (getThis()) {
+		if (zend_parse_parameters(ZEND_NUM_ARGS(), "z", &g) == FAILURE) {
+			return;
+		}
+
+		f = getThis();
+
+		ZVAL_COPY(&fObj, f);
+	/* compose($f, $g); */
+	} else {
+		if (zend_parse_parameters(ZEND_NUM_ARGS(), "zz", &f, &g) == FAILURE) {
+			return;
+		}
+
+		if (zend_callableify(&fObj, f, execute_data) != SUCCESS) {
+			return;
+		}
+	}
+
+	if (zend_callableify(&gObj, g, execute_data) != SUCCESS) {
+		zval_ptr_dtor(&fObj);
+		return;
+	}
+
+	fClosure = (zend_closure*)Z_OBJ(fObj);
+	fFunc = (zend_function*)&fClosure->func;
+
+	gClosure = (zend_closure*)Z_OBJ(gObj);
+	gFunc = (zend_function*)&gClosure->func;
+
+	zClosure = (zend_closure*)zend_closure_new(zend_ce_closure);
+	zFunc = (zend_internal_function*)&zClosure->func;
+
+	state_store = (zend_closure_state_store*)zend_closure_state_store_new(zend_ce_closure_state_store);
+	ZVAL_COPY_VALUE(&state_store->fObj, &fObj);
+	ZVAL_COPY_VALUE(&state_store->gObj, &gObj);
+	ZVAL_OBJ(&zClosure->this_ptr, (zend_object*)state_store);
+
+	zClosure->called_scope = zend_ce_closure_state_store;
+	zClosure->orig_internal_handler = zend_closure_compose_handler;
+
+	zFunc->type = ZEND_INTERNAL_FUNCTION;
+	memcpy(zFunc->arg_flags, gFunc->common.arg_flags, sizeof(zFunc->arg_flags));
+	zFunc->fn_flags = ZEND_ACC_PUBLIC; /* because fake method */
+	zFunc->fn_flags |= fFunc->common.fn_flags & ZEND_ACC_RETURN_REFERENCE;
+	zFunc->fn_flags |= gFunc->common.fn_flags & (ZEND_ACC_VARIADIC | ZEND_ACC_USER_ARG_INFO);
+	if (gFunc->type == ZEND_USER_FUNCTION) {
+		zFunc->fn_flags |= ZEND_ACC_USER_ARG_INFO;
+	}
+	zFunc->function_name = ZSTR_KNOWN(ZEND_STR_CLOSURE);
+	zFunc->scope = zend_ce_closure_state_store;
+	zFunc->prototype = NULL;
+	zFunc->num_args = gFunc->common.num_args;
+	zFunc->required_num_args = gFunc->common.required_num_args;
+	zFunc->arg_info = (zend_internal_arg_info*)gFunc->common.arg_info;
+	zFunc->handler = zend_closure_compose_handler;
+
+	RETURN_OBJ((zend_object*)zClosure);
+}
+/* }}} */
+
+
+ZEND_NAMED_FUNCTION(zend_closure_compose_handler) /* {{{ */
+{
+	zval *x_params;
+	int x_param_count = 0;
+	zend_closure_state_store *data;
+	zend_fcall_info fci = empty_fcall_info;
+	zend_fcall_info_cache fci_cache = empty_fcall_info_cache;
+	zval *gObj, *fObj, gResult;
+
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "*", &x_params, &x_param_count) == FAILURE) {
+		return;
+	}
+
+	data = (zend_closure_state_store*)Z_OBJ_P(getThis());
+	gObj = &data->gObj;
+	fObj = &data->fObj;
+
+	/* This should never happen as closures will always be callable */
+	if (zend_fcall_info_init(gObj, 0, &fci, &fci_cache, NULL, NULL) != SUCCESS) {
+		ZEND_ASSERT(0);
+	}
+
+	fci.retval = &gResult;
+	fci.param_count = x_param_count;
+	fci.params = x_params;
+	fci.no_separation = 0;
+
+	if (zend_call_function(&fci, &fci_cache) != SUCCESS) {
+		ZEND_ASSERT(0);
+		return;
+	}
+
+	/* This should never happen as closures will always be callable */
+	if (zend_fcall_info_init(fObj, 0, &fci, &fci_cache, NULL, NULL) != SUCCESS) {
+		ZEND_ASSERT(0);
+	}
+
+	fci.retval = return_value;
+	fci.param_count = 1;
+	fci.params = &gResult;
+	fci.no_separation = 0;
+
+	zend_call_function(&fci, &fci_cache);
+
+	zval_dtor(&gResult);
 }
 /* }}} */
 
@@ -602,12 +784,17 @@ ZEND_BEGIN_ARG_INFO_EX(arginfo_closure_fromcallable, 0, 0, 1)
 	ZEND_ARG_INFO(0, callable)
 ZEND_END_ARG_INFO()
 
+ZEND_BEGIN_ARG_INFO_EX(arginfo_closure_compose, 0, 0, 2)
+	ZEND_ARG_INFO(0, g)
+ZEND_END_ARG_INFO()
+
 static const zend_function_entry closure_functions[] = {
 	ZEND_ME(Closure, __construct, NULL, ZEND_ACC_PRIVATE)
 	ZEND_ME(Closure, bind, arginfo_closure_bind, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC)
 	ZEND_MALIAS(Closure, bindTo, bind, arginfo_closure_bindto, ZEND_ACC_PUBLIC)
 	ZEND_ME(Closure, call, arginfo_closure_call, ZEND_ACC_PUBLIC)
 	ZEND_ME(Closure, fromCallable, arginfo_closure_fromcallable, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC)
+	ZEND_ME(Closure, compose, arginfo_closure_compose, ZEND_ACC_PUBLIC)
 	ZEND_FE_END
 };
 
@@ -636,6 +823,22 @@ void zend_register_closure_ce(void) /* {{{ */
 	closure_handlers.get_debug_info = zend_closure_get_debug_info;
 	closure_handlers.get_closure = zend_closure_get_closure;
 	closure_handlers.get_gc = zend_closure_get_gc;
+
+	INIT_CLASS_ENTRY(ce, "{GeneratedClosureStateStore}", NULL);
+	zend_ce_closure_state_store = zend_register_internal_class(&ce);
+	zend_ce_closure_state_store->ce_flags |= ZEND_ACC_FINAL;
+	zend_ce_closure_state_store->serialize = zend_class_serialize_deny;
+	zend_ce_closure_state_store->unserialize = zend_class_unserialize_deny;
+
+	memcpy(&closure_state_store_handlers, zend_get_std_object_handlers(), sizeof(zend_object_handlers));
+	closure_state_store_handlers.free_obj = zend_closure_state_store_free_storage;
+	closure_state_store_handlers.get_constructor = zend_closure_get_constructor;
+	closure_state_store_handlers.write_property = zend_closure_write_property;
+	closure_state_store_handlers.read_property = zend_closure_read_property;
+	closure_state_store_handlers.get_property_ptr_ptr = zend_closure_get_property_ptr_ptr;
+	closure_state_store_handlers.has_property = zend_closure_has_property;
+	closure_state_store_handlers.unset_property = zend_closure_unset_property;
+	closure_state_store_handlers.clone_obj = NULL;
 }
 /* }}} */
 

@@ -35,6 +35,8 @@ ZEND_API zend_function *zend_get_closure_invoke_method(zend_object *obj);
 ZEND_API const zend_function *zend_get_closure_method_def(zval *obj);
 ZEND_API zval* zend_get_closure_this_ptr(zval *obj);
 
+ZEND_METHOD(Closure, compose);
+
 END_EXTERN_C()
 
 #endif
