@@ -37,6 +37,7 @@ ZEND_API zval* zend_get_closure_this_ptr(zval *obj);
 
 ZEND_METHOD(Closure, compose);
 ZEND_METHOD(Closure, partial);
+ZEND_METHOD(Closure, reverse);
 
 END_EXTERN_C()
 

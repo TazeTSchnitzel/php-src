@@ -77,6 +77,7 @@ ZEND_METHOD(Closure, __invoke) /* {{{ */
 
 ZEND_NAMED_FUNCTION(zend_closure_compose_handler);
 ZEND_NAMED_FUNCTION(zend_closure_partial_handler);
+ZEND_NAMED_FUNCTION(zend_closure_reverse_handler);
 
 static zend_bool zend_valid_closure_binding(
 		zend_closure *closure, zval *newthis, zend_class_entry *scope) /* {{{ */
@@ -118,7 +119,7 @@ static zend_bool zend_valid_closure_binding(
 
 	if (closure->orig_internal_handler == zend_closure_compose_handler
 		|| closure->orig_internal_handler == zend_closure_partial_handler) {
-		zend_error(E_WARNING, "Cannot rebind scope of closure created by Closure::compose() or Closure::partial()");
+		zend_error(E_WARNING, "Cannot rebind scope of closure created by Closure::compose(), Closure::partial() or Closure::reverse()");
 		return 0;
 	}
 
@@ -660,6 +661,106 @@ ZEND_NAMED_FUNCTION(zend_closure_partial_handler) /* {{{ */
 /* }}} */
 
 
+/* {{{ proto Closure Closure::reverse()
+       proto Closure reverse(callable f)
+   For a given function, returns a closure that calls it with the arguments it
+   is passed in reverse order. */
+ZEND_METHOD(Closure, reverse)
+{
+	zval *f;
+	zval fObj;
+	zend_closure *fClosure, *zClosure;
+	zend_function *fFunc;
+	zend_internal_function *zFunc;
+	zend_closure_state_store *state_store;
+
+	/* $f->reverse() */
+	if (getThis()) {
+		if (zend_parse_parameters_none() == FAILURE) {
+			return;
+		}
+
+		ZVAL_COPY(&fObj, getThis());
+	/* reverse($f); */
+	} else {
+		if (zend_parse_parameters(ZEND_NUM_ARGS(), "z", &f) == FAILURE) {
+			return;
+		}
+
+		if (zend_callableify(&fObj, f, execute_data) != SUCCESS) {
+			return;
+		}
+	}
+
+	fClosure = (zend_closure*)Z_OBJ(fObj);
+	fFunc = (zend_function*)&fClosure->func;
+
+	zClosure = (zend_closure*)zend_closure_new(zend_ce_closure);
+	zFunc = (zend_internal_function*)&zClosure->func;
+
+	state_store = (zend_closure_state_store*)zend_closure_state_store_new(zend_ce_closure_state_store);
+	ZVAL_COPY_VALUE(&state_store->fObj, &fObj);
+
+	ZVAL_OBJ(&zClosure->this_ptr, (zend_object*)state_store);
+
+	zClosure->called_scope = zend_ce_closure_state_store;
+	zClosure->orig_internal_handler = zend_closure_partial_handler;
+
+	zFunc->type = ZEND_INTERNAL_FUNCTION;
+	memset(zFunc->arg_flags, 0, sizeof(zFunc->arg_flags));
+	zFunc->fn_flags = ZEND_ACC_PUBLIC; /* because fake method */
+	zFunc->fn_flags |= ZEND_ACC_VARIADIC | (fFunc->common.fn_flags & ZEND_ACC_RETURN_REFERENCE);
+	zFunc->function_name = ZSTR_KNOWN(ZEND_STR_CLOSURE);
+	zFunc->scope = zend_ce_closure_state_store;
+	zFunc->prototype = NULL;
+	zFunc->num_args = 0;
+	zFunc->required_num_args = 0;
+	zFunc->arg_info = NULL;
+	zFunc->handler = zend_closure_reverse_handler;
+
+	RETURN_OBJ((zend_object*)zClosure);
+}
+/* }}} */
+
+
+ZEND_NAMED_FUNCTION(zend_closure_reverse_handler) /* {{{ */
+{
+	zval *x_params, *real_params;
+	int x_param_count = 0, i;
+	zend_closure_state_store *data;
+	zend_fcall_info fci = empty_fcall_info;
+	zend_fcall_info_cache fci_cache = empty_fcall_info_cache;
+	zval *fObj;
+
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "*", &x_params, &x_param_count) == FAILURE) {
+		return;
+	}
+
+	data = (zend_closure_state_store*)Z_OBJ_P(getThis());
+	fObj = &data->fObj;
+
+	/* This should never happen as closures will always be callable */
+	if (zend_fcall_info_init(fObj, 0, &fci, &fci_cache, NULL, NULL) != SUCCESS) {
+		ZEND_ASSERT(0);
+	}
+
+	real_params = safe_emalloc(x_param_count, sizeof(zval), 0);
+
+	for (i = 0; i < x_param_count; i++) {
+		memcpy(&real_params[i], &x_params[x_param_count - 1 - i], sizeof(zval));
+	}
+
+	fci.retval = return_value;
+	fci.param_count = x_param_count;
+	fci.params = real_params;
+
+	zend_call_function(&fci, &fci_cache);
+
+	efree(real_params);
+}
+/* }}} */
+
+
 static ZEND_COLD zend_function *zend_closure_get_constructor(zend_object *object) /* {{{ */
 {
 	zend_throw_error(NULL, "Instantiation of 'Closure' is not allowed");
@@ -940,6 +1041,7 @@ static const zend_function_entry closure_functions[] = {
 	ZEND_ME(Closure, fromCallable, arginfo_closure_fromcallable, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC)
 	ZEND_ME(Closure, compose, arginfo_closure_compose, ZEND_ACC_PUBLIC)
 	ZEND_ME(Closure, partial, arginfo_closure_partial, ZEND_ACC_PUBLIC)
+	ZEND_ME(Closure, reverse, NULL, ZEND_ACC_PUBLIC)
 	ZEND_FE_END
 };
 

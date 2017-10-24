@@ -242,6 +242,10 @@ ZEND_BEGIN_ARG_INFO_EX(arginfo_partial, 0, 0, 1)
 	ZEND_ARG_VARIADIC_INFO(0, arguments)
 ZEND_END_ARG_INFO()
 
+ZEND_BEGIN_ARG_INFO_EX(arginfo_reverse, 0, 0, 1)
+	ZEND_ARG_INFO(0, f)
+ZEND_END_ARG_INFO()
+
 /* }}} */
 
 static const zend_function_entry builtin_functions[] = { /* {{{ */
@@ -305,6 +309,7 @@ static const zend_function_entry builtin_functions[] = { /* {{{ */
 	ZEND_FE(gc_disable, 		arginfo_zend__void)
 	ZEND_FENTRY(compose,	ZEND_MN(Closure_compose),	arginfo_compose, 0)
 	ZEND_FENTRY(partial,	ZEND_MN(Closure_partial),	arginfo_partial, 0)
+	ZEND_FENTRY(reverse,	ZEND_MN(Closure_reverse),	arginfo_reverse, 0)
 	ZEND_FE_END
 };
 /* }}} */
