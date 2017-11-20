@@ -85,6 +85,7 @@ static ZEND_FUNCTION(gc_collect_cycles);
 static ZEND_FUNCTION(gc_enabled);
 static ZEND_FUNCTION(gc_enable);
 static ZEND_FUNCTION(gc_disable);
+static ZEND_FUNCTION(id);
 
 /* {{{ arginfo */
 ZEND_BEGIN_ARG_INFO(arginfo_zend__void, 0)
@@ -246,6 +247,10 @@ ZEND_BEGIN_ARG_INFO_EX(arginfo_reverse, 0, 0, 1)
 	ZEND_ARG_INFO(0, f)
 ZEND_END_ARG_INFO()
 
+ZEND_BEGIN_ARG_INFO_EX(arginfo_id, 0, 0, 1)
+	ZEND_ARG_INFO(0, value)
+ZEND_END_ARG_INFO()
+
 /* }}} */
 
 static const zend_function_entry builtin_functions[] = { /* {{{ */
@@ -310,6 +315,7 @@ static const zend_function_entry builtin_functions[] = { /* {{{ */
 	ZEND_FENTRY(compose,	ZEND_MN(Closure_compose),	arginfo_compose, 0)
 	ZEND_FENTRY(partial,	ZEND_MN(Closure_partial),	arginfo_partial, 0)
 	ZEND_FENTRY(reverse,	ZEND_MN(Closure_reverse),	arginfo_reverse, 0)
+	ZEND_FE(id,				arginfo_id)
 	ZEND_FE_END
 };
 /* }}} */
@@ -2714,6 +2720,21 @@ ZEND_FUNCTION(get_extension_funcs)
 	}
 }
 /* }}} */
+
+/* {{{ proto mixed id(mixed value)
+   Returns its argument */
+ZEND_FUNCTION(id)
+{
+	zval *v;
+	zval **args; /* unused, always ignored */
+	int arg_count;
+
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "z*", &v, &args, &arg_count) == FAILURE) {
+		return;
+	}
+
+	ZVAL_COPY(return_value, v);
+}
 
 /*
  * Local variables:
