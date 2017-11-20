@@ -78,6 +78,7 @@ ZEND_METHOD(Closure, __invoke) /* {{{ */
 ZEND_NAMED_FUNCTION(zend_closure_compose_handler);
 ZEND_NAMED_FUNCTION(zend_closure_partial_handler);
 ZEND_NAMED_FUNCTION(zend_closure_reverse_handler);
+ZEND_NAMED_FUNCTION(zend_closure_constant_handler);
 
 static zend_bool zend_valid_closure_binding(
 		zend_closure *closure, zval *newthis, zend_class_entry *scope) /* {{{ */
@@ -761,6 +762,56 @@ ZEND_NAMED_FUNCTION(zend_closure_reverse_handler) /* {{{ */
 /* }}} */
 
 
+/* {{{ proto Closure Closure::constant(mixed k)
+   Returns a closure that always returns the specified constant value. */
+ZEND_METHOD(Closure, constant)
+{
+	zval *k;
+	zend_closure *zClosure;
+	zend_internal_function *zFunc;
+	zend_closure_state_store *state_store;
+
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "z", &k) == FAILURE) {
+		return;
+	}
+
+	zClosure = (zend_closure*)zend_closure_new(zend_ce_closure);
+	zFunc = (zend_internal_function*)&zClosure->func;
+
+	state_store = (zend_closure_state_store*)zend_closure_state_store_new(zend_ce_closure_state_store);
+	ZVAL_COPY(&state_store->fObj, k);
+
+	ZVAL_OBJ(&zClosure->this_ptr, (zend_object*)state_store);
+
+	zClosure->called_scope = zend_ce_closure_state_store;
+	zClosure->orig_internal_handler = zend_closure_constant_handler;
+
+	zFunc->type = ZEND_INTERNAL_FUNCTION;
+	zFunc->fn_flags = ZEND_ACC_PUBLIC; /* because fake method */
+	zFunc->function_name = ZSTR_KNOWN(ZEND_STR_CLOSURE);
+	zFunc->scope = zend_ce_closure_state_store;
+	zFunc->prototype = NULL;
+	zFunc->num_args = 0;
+	zFunc->required_num_args = 0;
+	zFunc->arg_info = NULL;
+	zFunc->handler = zend_closure_constant_handler;
+
+	RETURN_OBJ((zend_object*)zClosure);
+}
+/* }}} */
+
+
+ZEND_NAMED_FUNCTION(zend_closure_constant_handler) /* {{{ */
+{
+	zend_closure_state_store *data;
+
+	data = (zend_closure_state_store*)Z_OBJ_P(getThis());
+
+	ZVAL_COPY(return_value, &data->fObj);
+}
+/* }}} */
+
+
 static ZEND_COLD zend_function *zend_closure_get_constructor(zend_object *object) /* {{{ */
 {
 	zend_throw_error(NULL, "Instantiation of 'Closure' is not allowed");
@@ -1025,12 +1076,16 @@ ZEND_BEGIN_ARG_INFO_EX(arginfo_closure_fromcallable, 0, 0, 1)
 	ZEND_ARG_INFO(0, callable)
 ZEND_END_ARG_INFO()
 
-ZEND_BEGIN_ARG_INFO_EX(arginfo_closure_compose, 0, 0, 2)
+ZEND_BEGIN_ARG_INFO_EX(arginfo_closure_compose, 0, 0, 1)
 	ZEND_ARG_INFO(0, g)
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(arginfo_closure_partial, 0, 0, 0)
 	ZEND_ARG_VARIADIC_INFO(0, arguments)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_closure_constant, 0, 0, 1)
+	ZEND_ARG_VARIADIC_INFO(0, k)
 ZEND_END_ARG_INFO()
 
 static const zend_function_entry closure_functions[] = {
@@ -1042,6 +1097,7 @@ static const zend_function_entry closure_functions[] = {
 	ZEND_ME(Closure, compose, arginfo_closure_compose, ZEND_ACC_PUBLIC)
 	ZEND_ME(Closure, partial, arginfo_closure_partial, ZEND_ACC_PUBLIC)
 	ZEND_ME(Closure, reverse, NULL, ZEND_ACC_PUBLIC)
+	ZEND_ME(Closure, constant, arginfo_closure_constant, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC)
 	ZEND_FE_END
 };
 
