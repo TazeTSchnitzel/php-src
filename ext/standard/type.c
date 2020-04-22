@@ -418,3 +418,65 @@ PHP_FUNCTION(is_countable)
 	RETURN_BOOL(zend_is_countable(var));
 }
 /* }}} */
+
+/* {{{ proto bool is_list(mixed value)
+   Returns true if value is a list-like array
+   TODO: Better description */
+PHP_FUNCTION(is_list)
+{
+	zval *arg;
+
+	ZEND_PARSE_PARAMETERS_START(1, 1)
+		Z_PARAM_ZVAL(arg)
+	ZEND_PARSE_PARAMETERS_END();
+
+	if (Z_TYPE_P(arg) != IS_ARRAY)
+	{
+		/* FIXME: Remove these fprintf's */
+		fprintf(stderr, "Not array\n");
+		RETURN_FALSE;
+	}
+
+	HashTable *ht = Z_ARR_P(arg);
+
+	/* TODO: Presumption is the empty array should be considered a list, and
+	 * that is probably the most helpful behaviour, but it's debatable…
+	 */
+	if (0 == zend_hash_num_elements(ht))
+	{
+		fprintf(stderr, "No elements\n");
+		RETURN_TRUE;
+	}
+
+	/* Packed arrays have only integer keys in ascending order.
+	 * Arrays without holes have no gaps between keys.
+	 */
+	if (HT_IS_PACKED(ht) && HT_IS_WITHOUT_HOLES(ht))
+	{
+		fprintf(stderr, "Packed and without holes!\n");
+		RETURN_TRUE;
+	}
+
+	/* TODO: Any more possible fast-paths to avoid foreaching? */
+	fprintf(stderr, "Foreaching\n");
+
+	zend_long num_key, last_num_key = -1;
+	zend_string *str_key;
+	ZEND_HASH_FOREACH_KEY(ht, num_key, str_key) {
+		if (str_key)
+		{
+			fprintf(stderr, "Hit string key\n");
+			RETURN_FALSE;
+		}
+		if (num_key != last_num_key + 1)
+		{
+			fprintf(stderr, "Hit non-consecutive key (%lld != %lld + 1)\n", num_key, last_num_key);
+			RETURN_FALSE;
+		}
+		last_num_key = num_key;
+	} ZEND_HASH_FOREACH_END();
+
+	fprintf(stderr, "No irregularities encountered, true by slowest path\n");
+	RETURN_TRUE;
+}
+/* }}} */

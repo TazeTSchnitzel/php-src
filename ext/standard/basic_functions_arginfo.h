@@ -2113,6 +2113,8 @@ ZEND_END_ARG_INFO()
 
 #define arginfo_is_countable arginfo_boolval
 
+#define arginfo_is_list arginfo_boolval
+
 #if defined(HAVE_GETTIMEOFDAY)
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_uniqid, 0, 0, IS_STRING, 0)
 	ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, prefix, IS_STRING, 0, "\"\"")
@@ -2810,6 +2812,7 @@ ZEND_FUNCTION(is_scalar);
 ZEND_FUNCTION(is_callable);
 ZEND_FUNCTION(is_iterable);
 ZEND_FUNCTION(is_countable);
+ZEND_FUNCTION(is_list);
 #if defined(HAVE_GETTIMEOFDAY)
 ZEND_FUNCTION(uniqid);
 #endif
@@ -3459,6 +3462,7 @@ static const zend_function_entry ext_functions[] = {
 	ZEND_FE(is_callable, arginfo_is_callable)
 	ZEND_FE(is_iterable, arginfo_is_iterable)
 	ZEND_FE(is_countable, arginfo_is_countable)
+	ZEND_FE(is_list, arginfo_is_list)
 #if defined(HAVE_GETTIMEOFDAY)
 	ZEND_FE(uniqid, arginfo_uniqid)
 #endif
